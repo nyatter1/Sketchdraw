@@ -3,100 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect | Messages</title>
+    <title>Connect | Live</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background: radial-gradient(circle at top left, #1e1b4b, #0f172a); height: 100vh; display: flex; overflow: hidden; color: white; }
+        body { font-family: 'Inter', sans-serif; background: radial-gradient(circle at top left, #1e1b4b, #0f172a); height: 100vh; color: white; margin:0; }
         .glass-panel { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .input-gradient { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.3s ease; }
-        .input-gradient:focus { border-color: #6366f1; outline: none; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
-        .message-bubble { max-width: 70%; padding: 0.75rem 1rem; border-radius: 1.25rem; margin-bottom: 0.5rem; position: relative; word-wrap: break-word; }
+        .input-gradient { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .message-bubble { max-width: 70%; padding: 0.75rem 1rem; border-radius: 1.25rem; margin-bottom: 0.5rem; word-wrap: break-word; }
         .message-received { background: rgba(255, 255, 255, 0.07); border-bottom-left-radius: 0.25rem; }
-        .message-sent { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); align-self: flex-end; border-bottom-right-radius: 0.25rem; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3); }
-        .floating-blob { position: absolute; width: 400px; height: 400px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15)); filter: blur(100px); border-radius: 50%; z-index: -1; pointer-events: none; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        .message-sent { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); align-self: flex-end; border-bottom-right-radius: 0.25rem; }
+        .sidebar-transition { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .hidden { display: none !important; }
-        .fade-in { animation: fadeIn 0.4s ease forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="items-center justify-center p-0 m-0">
-    <div class="floating-blob" style="top: -100px; left: -100px;"></div>
-    <div class="floating-blob" style="bottom: -100px; right: -100px;"></div>
+<body class="flex items-center justify-center">
 
     <div id="auth-screen" class="w-full max-w-md p-4">
-        <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 mb-4 shadow-lg shadow-indigo-500/20">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+        <div class="glass-panel rounded-3xl p-8 text-center">
+            <h1 class="text-3xl font-bold mb-6">Connect</h1>
+            <div id="loginForm" class="space-y-4">
+                <input type="email" id="li-email" placeholder="Email" class="input-gradient w-full px-4 py-3 rounded-xl text-white outline-none">
+                <input type="password" id="li-pass" placeholder="Password" class="input-gradient w-full px-4 py-3 rounded-xl text-white outline-none">
+                <button onclick="handleAuth('login')" class="w-full py-3 bg-indigo-600 rounded-xl font-bold">Sign In</button>
+                <p class="text-sm text-slate-400">No account? <button onclick="toggleF('signup')" class="text-indigo-400 underline">Sign Up</button></p>
             </div>
-            <h1 class="text-3xl font-bold">Connect</h1>
-            <p class="text-slate-400 mt-2">The world is waiting to hear from you.</p>
-        </div>
-
-        <div class="glass-panel rounded-3xl p-8 relative">
-            <div id="loginForm" class="fade-in">
-                <h2 class="text-2xl font-semibold mb-6">Welcome Back</h2>
-                <div class="space-y-5">
-                    <input type="email" id="li-email" placeholder="Email" class="input-gradient w-full px-4 py-3 rounded-xl text-white">
-                    <input type="password" id="li-pass" placeholder="Password" class="input-gradient w-full px-4 py-3 rounded-xl text-white">
-                    <button onclick="handleAuth('login')" id="login-btn" class="w-full py-3.5 bg-indigo-600 rounded-xl font-semibold">Sign In</button>
+            <div id="signupForm" class="hidden space-y-4">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="su-first" placeholder="First" class="input-gradient px-4 py-3 rounded-xl outline-none">
+                    <input type="text" id="su-last" placeholder="Last" class="input-gradient px-4 py-3 rounded-xl outline-none">
                 </div>
-                <p class="text-center mt-8 text-slate-400 text-sm">New here? <button onclick="toggleForm('signup')" class="text-indigo-400 font-semibold underline">Create account</button></p>
-            </div>
-
-            <div id="signupForm" class="fade-in hidden">
-                <h2 class="text-2xl font-semibold mb-6">Create Account</h2>
-                <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <input type="text" id="su-first" placeholder="First Name" class="input-gradient w-full px-4 py-3 rounded-xl text-white">
-                        <input type="text" id="su-last" placeholder="Last Name" class="input-gradient w-full px-4 py-3 rounded-xl text-white">
-                    </div>
-                    <input type="email" id="su-email" placeholder="Email" class="input-gradient w-full px-4 py-3 rounded-xl text-white">
-                    <input type="password" id="su-pass" placeholder="Password" class="input-gradient w-full px-4 py-3 rounded-xl text-white">
-                    <button onclick="handleAuth('signup')" id="signup-btn" class="w-full py-3.5 bg-indigo-600 rounded-xl font-semibold">Join Connect</button>
-                </div>
-                <p class="text-center mt-8 text-slate-400 text-sm">Member? <button onclick="toggleForm('login')" class="text-indigo-400 font-semibold underline">Log in</button></p>
+                <input type="email" id="su-email" placeholder="Email" class="input-gradient w-full px-4 py-3 rounded-xl outline-none">
+                <input type="password" id="su-pass" placeholder="Password" class="input-gradient w-full px-4 py-3 rounded-xl outline-none">
+                <button onclick="handleAuth('signup')" class="w-full py-3 bg-indigo-600 rounded-xl font-bold">Create Account</button>
+                <p class="text-sm text-slate-400">Have account? <button onclick="toggleF('login')" class="text-indigo-400 underline">Login</button></p>
             </div>
         </div>
     </div>
 
-    <div id="app-screen" class="hidden w-screen h-screen flex">
-        <aside class="w-80 h-full glass-panel hidden md:flex flex-col border-r border-white/10">
-            <div class="p-6 flex items-center gap-3">
-                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg"><svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg></div>
-                <h1 class="text-xl font-bold tracking-tight">Connect</h1>
+    <div id="app-screen" class="hidden w-full h-full flex overflow-hidden">
+        
+        <aside id="sidebar" class="sidebar-transition w-72 h-full glass-panel flex flex-col border-r border-white/10 shrink-0">
+            <div class="p-6 flex items-center justify-between">
+                <h1 class="font-bold text-xl">Players</h1>
+                <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white md:hidden">✕</button>
             </div>
-            <div class="px-6 py-2 flex-1">
-                <h2 id="online-count" class="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Online Users</h2>
-                <div id="user-list" class="space-y-4 overflow-y-auto custom-scrollbar h-[calc(100vh-250px)]"></div>
+            <div class="px-6 flex-1 overflow-y-auto custom-scrollbar">
+                <p id="online-count" class="text-xs font-bold text-slate-500 mb-4 uppercase">Online — 0</p>
+                <div id="user-list" class="space-y-4"></div>
             </div>
-            <div class="p-6 bg-white/5 border-t border-white/10 flex items-center gap-3">
-                <img id="my-pfp" src="" class="w-11 h-11 rounded-full border-2 border-indigo-500/50">
-                <div class="flex-1">
-                    <p id="my-name" class="text-sm font-semibold truncate"></p>
-                    <p class="text-xs text-emerald-400">Online</p>
-                </div>
-                <button onclick="logout()" class="text-slate-400 hover:text-white"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg></button>
+            <div class="p-4 bg-white/5 flex items-center gap-3">
+                <img id="my-pfp" class="w-10 h-10 rounded-full border border-indigo-500">
+                <div class="flex-1 truncate"><p id="my-name" class="text-sm font-bold truncate"></p></div>
+                <button onclick="logout()" class="text-xs text-slate-400 hover:text-red-400">Logout</button>
             </div>
         </aside>
 
-        <main class="flex-1 flex flex-col h-full bg-transparent">
-            <header class="h-20 glass-panel px-8 flex items-center justify-between border-b border-white/10">
-                <div>
-                    <h2 class="font-bold text-white"># general-chat</h2>
-                    <p class="text-xs text-slate-400">Everything and anything</p>
-                </div>
-            </header>
-            <div id="messageDisplay" class="flex-1 overflow-y-auto p-8 flex flex-col custom-scrollbar"></div>
-            <div class="p-6">
-                <form onsubmit="sendMsg(event)" class="max-w-4xl mx-auto flex items-center gap-3 bg-white/5 border border-white/10 p-2 rounded-2xl focus-within:border-indigo-500/50 transition-all">
-                    <input type="text" id="msg-in" placeholder="Say something..." class="flex-1 bg-transparent outline-none px-4 py-2 text-white">
-                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 p-2.5 rounded-xl transition-all">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
+        <main class="flex-1 flex flex-col h-full relative">
+            <header class="h-16 glass-panel px-6 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="p-2 hover:bg-white/10 rounded-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
+                    <h2 class="font-bold"># general</h2>
+                </div>
+                <button onclick="clearChat()" class="text-xs bg-white/10 px-3 py-1 rounded-full hover:bg-white/20 transition">Clear My View</button>
+            </header>
+
+            <div id="messageDisplay" class="flex-1 overflow-y-auto p-6 flex flex-col custom-scrollbar"></div>
+
+            <div class="p-4">
+                <form onsubmit="sendMsg(event)" class="max-w-4xl mx-auto flex items-center gap-2 bg-white/5 border border-white/10 p-2 rounded-2xl">
+                    <input type="text" id="msg-in" placeholder="Type a message..." class="flex-1 bg-transparent outline-none px-3 py-2">
+                    <button type="submit" class="bg-indigo-600 p-2.5 rounded-xl hover:bg-indigo-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg></button>
                 </form>
             </div>
         </main>
@@ -111,9 +93,22 @@
             if(saved) { myData = JSON.parse(saved); launch(); }
         }
 
-        function toggleForm(view) {
-            document.getElementById('loginForm').classList.toggle('hidden', view === 'signup');
-            document.getElementById('signupForm').classList.toggle('hidden', view === 'login');
+        function toggleF(v) {
+            document.getElementById('loginForm').classList.toggle('hidden', v === 'signup');
+            document.getElementById('signupForm').classList.toggle('hidden', v === 'login');
+        }
+
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            if (sb.style.marginLeft === "-288px") {
+                sb.style.marginLeft = "0px";
+            } else {
+                sb.style.marginLeft = "-288px";
+            }
+        }
+
+        function clearChat() {
+            document.getElementById('messageDisplay').innerHTML = '<div class="text-center text-slate-500 text-xs my-4">Chat cleared locally</div>';
         }
 
         async function handleAuth(type) {
@@ -121,9 +116,6 @@
             const password = document.getElementById(type === 'login' ? 'li-pass' : 'su-pass').value;
             const firstName = type === 'signup' ? document.getElementById('su-first').value : '';
             const lastName = type === 'signup' ? document.getElementById('su-last').value : '';
-            
-            const btn = document.getElementById(type + '-btn');
-            btn.innerText = 'Processing...';
 
             const res = await fetch('/auth', {
                 method: 'POST',
@@ -131,8 +123,6 @@
                 body: JSON.stringify({ email, password, firstName, lastName, type })
             });
             const data = await res.json();
-            btn.innerText = type === 'login' ? 'Sign In' : 'Join Connect';
-
             if(data.success) {
                 myData = data.user;
                 localStorage.setItem('connect_user', JSON.stringify(myData));
@@ -160,18 +150,13 @@
         function render(m) {
             const isMe = m.email === myData.email;
             const time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const html = isMe ? `
-                <div class="flex flex-col items-end mb-6 fade-in">
-                    <span class="text-xs text-slate-500 mr-1 mb-1">You • ${time}</span>
-                    <div class="message-bubble message-sent">${m.text}</div>
-                </div>` : `
-                <div class="flex gap-3 mb-6 fade-in">
-                    <img src="${m.pfp}" class="w-9 h-9 rounded-xl self-end border border-white/10">
-                    <div class="flex flex-col">
-                        <span class="text-xs text-slate-500 ml-1 mb-1">${m.user} • ${time}</span>
-                        <div class="message-bubble message-received">${m.text}</div>
-                    </div>
-                </div>`;
+            const html = `<div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-4 fade-in">
+                <div class="flex items-center gap-2 mb-1">
+                    ${!isMe ? `<img src="${m.pfp}" class="w-5 h-5 rounded-full">` : ''}
+                    <span class="text-[10px] text-slate-500">${isMe ? 'You' : m.user} • ${time}</span>
+                </div>
+                <div class="message-bubble ${isMe ? 'message-sent' : 'message-received'} text-sm">${m.text}</div>
+            </div>`;
             const box = document.getElementById('messageDisplay');
             box.insertAdjacentHTML('beforeend', html);
             box.scrollTop = box.scrollHeight;
@@ -179,14 +164,11 @@
 
         socket.on('update-users', users => {
             const list = document.getElementById('user-list');
-            document.getElementById('online-count').innerText = `Online Users — ${users.length}`;
+            document.getElementById('online-count').innerText = `Online — ${users.length}`;
             list.innerHTML = users.map(u => `
-                <div class="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-all group">
-                    <div class="relative">
-                        <img src="${u.profilePic}" class="w-10 h-10 rounded-full border border-white/10">
-                        <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#0f172a] absolute bottom-0 right-0"></div>
-                    </div>
-                    <div><p class="text-sm font-medium text-white">${u.firstName} ${u.lastName}</p><p class="text-xs text-slate-500">Active</p></div>
+                <div class="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-all">
+                    <div class="relative"><img src="${u.profilePic}" class="w-8 h-8 rounded-full border border-white/10"><div class="w-2 h-2 bg-emerald-500 rounded-full absolute bottom-0 right-0 border border-slate-900"></div></div>
+                    <div class="truncate text-sm font-medium">${u.firstName} ${u.lastName}</div>
                 </div>
             `).join('');
         });
