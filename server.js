@@ -1,85 +1,82 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const fs = require('fs');
-const path = require('path');
-
+const mongoose = require('mongoose');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const USERS_FILE = path.join(__dirname, 'users.json');
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('TikSnap DB Connected'))
+    .catch(err => console.error(err));
 
-// Helper to load users safely
-function loadUsers() {
-    if (!fs.existsSync(USERS_FILE)) {
-        fs.writeFileSync(USERS_FILE, JSON.stringify({}));
-    }
-    try {
-        return JSON.parse(fs.readFileSync(USERS_FILE));
-    } catch (e) {
-        return {};
-    }
-}
+// --- DATABASE SCHEMAS ---
+const UserSchema = new mongoose.Schema({
+    username: { type: String, unique: true, required: true },
+    password: { type: String, required: true },
+    email: String,
+    dob: String,
+    profilePic: { type: String, default: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' }
+});
+
+const MessageSchema = new mongoose.Schema({
+    user: String,
+    text: String,
+    pfp: String,
+    timestamp: { type: Date, default: Date.now }
+});
+
+const User = mongoose.model('User', UserSchema);
+const Message = mongoose.model('Message', MessageSchema);
 
 app.use(express.static('public'));
 app.use(express.json());
 
-let onlineUsers = {}; // Tracks socketID -> Username
+let onlineUsers = {}; 
 
-// Authentication Route
-app.post('/auth', (req, res) => {
-    const { username, password, dob, type } = req.body;
-    const users = loadUsers();
-
-    if (type === 'signup') {
-        if (users[username]) {
-            return res.json({ success: false, message: "Username taken!" });
-        }
-        // Save user with DOB
-        users[username] = { password, dob };
-        fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-        return res.json({ success: true, message: "Account created!" });
-    } 
-    
-    if (type === 'login') {
-        if (users[username] && users[username].password === password) {
-            return res.json({ success: true });
-        }
-        return res.json({ success: false, message: "Invalid credentials" });
-    }
+// --- AUTH ROUTES ---
+app.post('/auth', async (req, res) => {
+    const { username, password, email, dob, pfp, type } = req.body;
+    try {
+        if (type === 'signup') {
+            const existing = await User.findOne({ username });
+            if (existing) return res.json({ success: false, message: "Username taken" });
+            const newUser = await User.create({ username, password, email, dob, profilePic: pfp || undefined });
+            return res.json({ success: true, user: newUser });
+        } 
+        const user = await User.findOne({ username, password });
+        if (user) return res.json({ success: true, user });
+        res.json({ success: false, message: "Invalid Login" });
+    } catch (err) { res.json({ success: false, message: "Server Error" }); }
 });
 
-// Real-time Chat Logic
-io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
+// --- SOCKET LOGIC ---
+io.on('connection', async (socket) => {
+    // Load last 50 messages when someone joins
+    const history = await Message.find().sort({ _id: -1 }).limit(50);
+    socket.emit('load-history', history.reverse());
 
-    socket.on('join-chat', (username) => {
-        socket.username = username;
-        onlineUsers[socket.id] = username;
-        
-        // Broadcast new user list to everyone
+    socket.on('join-chat', (userData) => {
+        socket.user = userData;
+        onlineUsers[socket.id] = userData;
         io.emit('update-user-list', Object.values(onlineUsers));
-        // Tell chat someone joined
-        socket.broadcast.emit('chat-message', { 
-            user: "System", 
-            text: `${username} has joined the chat!`, 
-            type: 'system' 
-        });
     });
 
-    socket.on('chat-message', (msg) => {
-        if (!socket.username) return; // Block messages from non-logged users
-        io.emit('chat-message', { user: socket.username, text: msg, type: 'user' });
+    socket.on('chat-message', async (msg) => {
+        if (!socket.user) return;
+        const newMsg = await Message.create({ 
+            user: socket.user.username, 
+            text: msg, 
+            pfp: socket.user.profilePic 
+        });
+        io.emit('chat-message', newMsg);
     });
 
     socket.on('disconnect', () => {
-        if (socket.username) {
-            delete onlineUsers[socket.id];
-            io.emit('update-user-list', Object.values(onlineUsers));
-        }
+        delete onlineUsers[socket.id];
+        io.emit('update-user-list', Object.values(onlineUsers));
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`TikSnap Live on ${PORT}`));
