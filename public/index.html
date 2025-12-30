@@ -6,50 +6,41 @@
     <style>
         :root { --bg: #0b0e11; --card: #15191c; --accent: #00a8ff; --text: #ffffff; --border: rgba(255,255,255,0.08); }
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
-        
-        /* Auth Screen */
         #auth-screen { display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .auth-card { background: var(--card); padding: 40px; border-radius: 20px; border: 1px solid var(--border); width: 350px; text-align: center; }
+        .auth-card { background: var(--card); padding: 40px; border-radius: 20px; border: 1px solid var(--border); width: 320px; text-align: center; }
         input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid var(--border); background: #1c2126; color: white; box-sizing: border-box; }
-        .btn-primary { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .hidden { display: none !important; }
-
-        /* Main UI */
+        .btn-primary { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         #app-screen { display: none; height: 100vh; width: 100vw; display: flex; }
         .sidebar { width: 260px; background: var(--card); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; }
         .chat-main { flex-grow: 1; display: flex; flex-direction: column; }
-        #messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        #messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         .msg-bubble { display: flex; gap: 10px; }
-        .pfp-small { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
+        .pfp-small { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; background: #333; }
         .msg-content { background: #1c2126; padding: 10px 14px; border-radius: 12px; font-size: 14px; }
         .msg-content b { color: var(--accent); font-size: 11px; display: block; }
-
-        /* Modal */
+        
+        /* Modal & Bio Styling */
         #profile-modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:999; display:none; align-items:center; justify-content:center; }
-        .modal-content { background: var(--card); width: 380px; border-radius: 20px; overflow: hidden; border: 1px solid var(--border); position: relative; }
-        #v-banner { height: 120px; background: var(--accent); cursor: pointer; background-size: cover; background-position: center; }
+        .modal-content { background: var(--card); width: 380px; border-radius: 20px; overflow: hidden; border: 1px solid var(--border); text-align: center; }
+        #v-banner { height: 120px; background-size: cover; background-position: center; cursor: pointer; }
         #v-pfp { width: 90px; height: 90px; border-radius: 50%; border: 4px solid var(--card); margin-top: -45px; object-fit: cover; cursor: pointer; }
-        .user-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; cursor: pointer; }
-        .user-item:hover { background: rgba(255,255,255,0.05); }
+        #v-bio { color: #aaa; font-size: 14px; padding: 15px; border-radius: 8px; outline: none; margin: 10px 20px; display: block; border: 1px solid transparent; transition: 0.3s; }
+        #v-bio[contenteditable="true"]:hover { background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
     <div id="auth-screen">
         <div class="auth-card">
-            <h2 id="auth-title">TikSnap</h2>
+            <h2>TikSnap</h2>
             <input type="text" id="user" placeholder="Username">
             <input type="password" id="pass" placeholder="Password">
-            <div id="signup-extra" class="hidden">
-                <input type="email" id="email" placeholder="Email">
-                <input type="date" id="dob">
-            </div>
-            <button class="btn-primary" id="auth-btn" onclick="handleAuth()">Login</button>
-            <p onclick="toggleAuth()" style="font-size: 12px; color: #888; cursor: pointer; margin-top: 15px;">Change Mode</p>
+            <button class="btn-primary" onclick="handleAuth()">Login / Sign Up</button>
         </div>
     </div>
 
-    <div id="app-screen" class="hidden">
+    <div id="app-screen">
         <div class="sidebar">
             <h3 style="color: var(--accent)">TikSnap</h3>
             <div id="online-list" style="flex-grow: 1;"></div>
@@ -58,21 +49,20 @@
         <div class="chat-main">
             <div id="messages"></div>
             <div style="padding: 20px; display: flex; gap: 10px;">
-                <input type="text" id="msg-in" placeholder="Say something..." style="margin:0" onkeypress="if(event.key==='Enter')send()">
-                <button class="btn-primary" onclick="send()" style="width:80px; margin:0">Send</button>
+                <input type="text" id="msg-in" placeholder="Type a message..." style="margin:0" onkeypress="if(event.key==='Enter')send()">
+                <button class="btn-primary" onclick="send()" style="width:80px">Send</button>
             </div>
         </div>
     </div>
 
     <div id="profile-modal">
         <div class="modal-content">
-            <div id="v-banner" title="Click to change banner"></div>
-            <div style="text-align: center; padding-bottom: 20px;">
-                <img id="v-pfp" src="" title="Click to change PFP">
-                <h2 id="v-username"></h2>
-                <p id="v-bio" style="color:#888; font-size:14px; padding: 0 20px;"></p>
-                <button class="btn-primary" style="width: 100px" onclick="closeModal()">Close</button>
-            </div>
+            <div id="v-banner" title="Change Banner"></div>
+            <img id="v-pfp" src="" title="Change PFP">
+            <h2 id="v-username"></h2>
+            <div id="v-bio" contenteditable="false" onkeypress="if(event.key==='Enter'){this.blur(); event.preventDefault();}"></div>
+            <p style="font-size: 10px; color: #555;">(Press Enter to save bio)</p>
+            <button class="btn-primary" style="width: 100px; margin: 20px;" onclick="closeModal()">Close</button>
         </div>
         <input type="file" id="pfp-up" class="hidden" accept="image/*">
         <input type="file" id="banner-up" class="hidden" accept="image/*">
@@ -81,29 +71,20 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let isSignup = false, myData = null;
+        let myData = null;
 
         window.onload = () => {
             const saved = localStorage.getItem('tiksnap_user');
             if(saved) { myData = JSON.parse(saved); startApp(); }
         }
 
-        function toggleAuth() {
-            isSignup = !isSignup;
-            document.getElementById('signup-extra').classList.toggle('hidden', !isSignup);
-            document.getElementById('auth-btn').innerText = isSignup ? "Sign Up" : "Login";
-        }
-
         async function handleAuth() {
             const username = document.getElementById('user').value;
             const password = document.getElementById('pass').value;
-            const email = document.getElementById('email').value;
-            const dob = document.getElementById('dob').value;
-
             const res = await fetch('/auth', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ username, password, email, dob, type: isSignup?'signup':'login' })
+                body: JSON.stringify({ username, password, type: 'signup' })
             });
             const data = await res.json();
             if(data.success) {
@@ -115,7 +96,7 @@
 
         function startApp() {
             document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('app-screen').classList.remove('hidden');
+            document.getElementById('app-screen').style.display = 'flex';
             socket.emit('join-chat', myData);
         }
 
@@ -132,10 +113,10 @@
         function addMsg(m) {
             const div = document.createElement('div');
             div.className = 'msg-bubble';
-            div.innerHTML = `<img src="${m.pfp}" class="pfp-small"><div class="msg-content"><b>${m.user}</b>${m.text}</div>`;
-            const box = document.getElementById('messages');
-            box.appendChild(div);
-            box.scrollTop = box.scrollHeight;
+            div.innerHTML = `<img src="${m.pfp}" class="pfp-small" data-user="${m.user}">
+                             <div class="msg-content"><b>${m.user}</b>${m.text}</div>`;
+            document.getElementById('messages').appendChild(div);
+            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
         }
 
         socket.on('update-user-list', users => {
@@ -143,47 +124,78 @@
             list.innerHTML = '';
             users.forEach(u => {
                 const item = document.createElement('div');
-                item.className = 'user-item';
+                item.style.cursor = 'pointer';
+                item.innerHTML = `<img src="${u.profilePic}" class="pfp-small" style="width:20px;height:20px"> ${u.username}`;
                 item.onclick = () => showProfile(u);
-                item.innerHTML = `<img src="${u.profilePic}" class="pfp-small" style="width:25px; height:25px"> <span>${u.username}</span>`;
                 list.appendChild(item);
             });
+        });
+
+        // LIVE PROFILE UPDATE (No reload needed!)
+        socket.on('user-profile-updated', (updatedUser) => {
+            // Update sidebar & chat PFP in real-time
+            document.querySelectorAll(`.pfp-small[data-user="${updatedUser.username}"]`).forEach(img => {
+                img.src = updatedUser.profilePic;
+            });
+            if(myData && updatedUser.username === myData.username) {
+                myData = updatedUser;
+                localStorage.setItem('tiksnap_user', JSON.stringify(myData));
+            }
         });
 
         function showProfile(u) {
             document.getElementById('v-username').innerText = u.username;
             document.getElementById('v-pfp').src = u.profilePic;
             document.getElementById('v-banner').style.background = u.banner.startsWith('data') ? `url(${u.banner}) center/cover` : u.banner;
-            document.getElementById('v-bio').innerText = u.bio;
+            
+            const bioEl = document.getElementById('v-bio');
+            bioEl.innerText = u.bio;
             document.getElementById('profile-modal').style.display = 'flex';
 
             if(u.username === myData.username) {
+                bioEl.contentEditable = "true";
+                bioEl.onblur = () => uploadBio(bioEl.innerText);
                 document.getElementById('v-pfp').onclick = () => document.getElementById('pfp-up').click();
                 document.getElementById('v-banner').onclick = () => document.getElementById('banner-up').click();
             } else {
+                bioEl.contentEditable = "false";
                 document.getElementById('v-pfp').onclick = null;
                 document.getElementById('v-banner').onclick = null;
             }
         }
 
-        function closeModal() { document.getElementById('profile-modal').style.display = 'none'; }
-
-        async function upload(file, field) {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = async () => {
-                const res = await fetch('/update-profile', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ username: myData.username, field, value: reader.result })
-                });
-                const d = await res.json();
-                if(d.success) { myData = d.user; localStorage.setItem('tiksnap_user', JSON.stringify(myData)); location.reload(); }
-            };
+        async function uploadBio(newBio) {
+            if(newBio === myData.bio) return;
+            await silentUpdate('bio', newBio);
         }
 
-        document.getElementById('pfp-up').onchange = (e) => upload(e.target.files[0], 'profilePic');
-        document.getElementById('banner-up').onchange = (e) => upload(e.target.files[0], 'banner');
+        async function silentUpdate(field, value) {
+            const res = await fetch('/update-profile', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ username: myData.username, field, value })
+            });
+            const d = await res.json();
+            if(d.success) {
+                myData = d.user;
+                // Update local UI only
+                if(field === 'profilePic') document.getElementById('v-pfp').src = value;
+                if(field === 'banner') document.getElementById('v-banner').style.background = `url(${value}) center/cover`;
+            }
+        }
+
+        function closeModal() { document.getElementById('profile-modal').style.display = 'none'; }
+
+        document.getElementById('pfp-up').onchange = (e) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(e.target.files[0]);
+            reader.onload = () => silentUpdate('profilePic', reader.result);
+        };
+        document.getElementById('banner-up').onchange = (e) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(e.target.files[0]);
+            reader.onload = () => silentUpdate('banner', reader.result);
+        };
     </script>
 </body>
 </html>
