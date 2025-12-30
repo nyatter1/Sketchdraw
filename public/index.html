@@ -2,67 +2,95 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TikSnap Elite</title>
     <style>
-        :root { --bg: #0b0e11; --card: #15191c; --accent: #00a8ff; --text: #ffffff; --border: rgba(255,255,255,0.08); }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
-        #auth-screen { display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .auth-card { background: var(--card); padding: 40px; border-radius: 20px; border: 1px solid var(--border); width: 320px; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid var(--border); background: #1c2126; color: white; box-sizing: border-box; }
-        .btn-primary { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        #app-screen { display: none; height: 100vh; width: 100vw; display: flex; }
-        .sidebar { width: 260px; background: var(--card); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; }
-        .chat-main { flex-grow: 1; display: flex; flex-direction: column; }
-        #messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .msg-bubble { display: flex; gap: 10px; }
-        .pfp-small { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; background: #333; }
-        .msg-content { background: #1c2126; padding: 10px 14px; border-radius: 12px; font-size: 14px; }
-        .msg-content b { color: var(--accent); font-size: 11px; display: block; }
+        :root { 
+            --bg: #080a0c; 
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent: #00a8ff; 
+            --text: #e0e0e0;
+        }
+        body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         
-        /* Modal & Bio Styling */
-        #profile-modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:999; display:none; align-items:center; justify-content:center; }
-        .modal-content { background: var(--card); width: 380px; border-radius: 20px; overflow: hidden; border: 1px solid var(--border); text-align: center; }
-        #v-banner { height: 120px; background-size: cover; background-position: center; cursor: pointer; }
-        #v-pfp { width: 90px; height: 90px; border-radius: 50%; border: 4px solid var(--card); margin-top: -45px; object-fit: cover; cursor: pointer; }
-        #v-bio { color: #aaa; font-size: 14px; padding: 15px; border-radius: 8px; outline: none; margin: 10px 20px; display: block; border: 1px solid transparent; transition: 0.3s; }
-        #v-bio[contenteditable="true"]:hover { background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
-        .hidden { display: none !important; }
+        /* Layout */
+        #auth-screen { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        #app-screen { display: none; width: 100vw; height: 100vh; flex-direction: row; }
+
+        /* Sidebar */
+        .sidebar { width: 280px; background: #0c0f12; border-right: 1px solid var(--glass-border); display: flex; flex-direction: column; padding: 20px; }
+        .sidebar h2 { color: var(--accent); font-size: 1.2rem; margin-bottom: 30px; }
+        .user-list { flex-grow: 1; overflow-y: auto; }
+        .user-card { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; cursor: pointer; transition: 0.2s; margin-bottom: 5px; }
+        .user-card:hover { background: var(--glass); }
+
+        /* Chat Area */
+        .chat-container { flex-grow: 1; display: flex; flex-direction: column; background: #080a0c; }
+        #messages { flex-grow: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .msg { display: flex; gap: 12px; max-width: 80%; }
+        .msg img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--glass-border); }
+        .msg-content { background: var(--glass); border: 1px solid var(--glass-border); padding: 12px 16px; border-radius: 18px; border-top-left-radius: 4px; }
+        .msg-content b { display: block; color: var(--accent); font-size: 0.75rem; margin-bottom: 4px; }
+
+        /* Input Area */
+        .input-bar { padding: 20px; border-top: 1px solid var(--glass-border); display: flex; gap: 10px; }
+        input[type="text"] { flex-grow: 1; background: var(--glass); border: 1px solid var(--glass-border); color: white; padding: 12px 20px; border-radius: 25px; outline: none; }
+        button { background: var(--accent); color: white; border: none; padding: 10px 25px; border-radius: 25px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        button:hover { opacity: 0.8; transform: scale(1.05); }
+
+        /* Profile Modal */
+        #profile-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+        .modal-body { width: 400px; background: #12161b; border-radius: 24px; overflow: hidden; border: 1px solid var(--glass-border); position: relative; }
+        .banner { height: 140px; background: var(--accent); background-size: cover; background-position: center; cursor: pointer; }
+        .pfp-wrap { text-align: center; margin-top: -50px; }
+        .pfp-large { width: 100px; height: 100px; border-radius: 50%; border: 6px solid #12161b; cursor: pointer; object-fit: cover; }
+        .bio-box { padding: 20px; text-align: center; }
+        .bio-box h3 { margin: 10px 0 5px 0; }
+        #v-bio { color: #888; font-size: 14px; outline: none; padding: 10px; border-radius: 8px; transition: 0.3s; }
+        #v-bio[contenteditable="true"]:hover { background: var(--glass); }
+
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
     <div id="auth-screen">
-        <div class="auth-card">
-            <h2>TikSnap</h2>
+        <div style="background: #12161b; padding: 40px; border-radius: 24px; border: 1px solid var(--glass-border); width: 320px; text-align: center;">
+            <h2 style="color: var(--accent); margin-bottom: 30px;">TikSnap Elite</h2>
             <input type="text" id="user" placeholder="Username">
             <input type="password" id="pass" placeholder="Password">
-            <button class="btn-primary" onclick="handleAuth()">Login / Sign Up</button>
+            <button style="width: 100%; margin-top: 15px;" onclick="handleAuth()">Enter Portal</button>
         </div>
     </div>
 
     <div id="app-screen">
         <div class="sidebar">
-            <h3 style="color: var(--accent)">TikSnap</h3>
-            <div id="online-list" style="flex-grow: 1;"></div>
-            <button onclick="logout()" class="btn-primary" style="background:#333">Logout</button>
+            <h2>TikSnap</h2>
+            <div class="user-list" id="user-list"></div>
+            <button style="background: #222; width: 100%;" onclick="logout()">Logout</button>
         </div>
-        <div class="chat-main">
+        <div class="chat-container">
             <div id="messages"></div>
-            <div style="padding: 20px; display: flex; gap: 10px;">
-                <input type="text" id="msg-in" placeholder="Type a message..." style="margin:0" onkeypress="if(event.key==='Enter')send()">
-                <button class="btn-primary" onclick="send()" style="width:80px">Send</button>
+            <div class="input-bar">
+                <input type="text" id="msg-in" placeholder="Type your message..." onkeypress="if(event.key==='Enter')send()">
+                <button onclick="send()">Send</button>
             </div>
         </div>
     </div>
 
     <div id="profile-modal">
-        <div class="modal-content">
-            <div id="v-banner" title="Change Banner"></div>
-            <img id="v-pfp" src="" title="Change PFP">
-            <h2 id="v-username"></h2>
-            <div id="v-bio" contenteditable="false" onkeypress="if(event.key==='Enter'){this.blur(); event.preventDefault();}"></div>
-            <p style="font-size: 10px; color: #555;">(Press Enter to save bio)</p>
-            <button class="btn-primary" style="width: 100px; margin: 20px;" onclick="closeModal()">Close</button>
+        <div class="modal-body">
+            <div class="banner" id="v-banner" onclick="document.getElementById('banner-up').click()"></div>
+            <div class="pfp-wrap">
+                <img src="" class="pfp-large" id="v-pfp" onclick="document.getElementById('pfp-up').click()">
+            </div>
+            <div class="bio-box">
+                <h3 id="v-username"></h3>
+                <div id="v-bio" contenteditable="false"></div>
+                <p style="font-size: 10px; color: #444; margin-top: 10px;">(Click Banner, PFP, or Bio to edit your profile)</p>
+                <button style="margin-top: 20px; background: #222;" onclick="closeProfile()">Close</button>
+            </div>
         </div>
         <input type="file" id="pfp-up" class="hidden" accept="image/*">
         <input type="file" id="banner-up" class="hidden" accept="image/*">
@@ -73,14 +101,14 @@
         const socket = io();
         let myData = null;
 
+        // Auto-Login
         window.onload = () => {
             const saved = localStorage.getItem('tiksnap_user');
             if(saved) { myData = JSON.parse(saved); startApp(); }
         }
 
         async function handleAuth() {
-            const username = document.getElementById('user').value;
-            const password = document.getElementById('pass').value;
+            const username = document.getElementById('user').value, password = document.getElementById('pass').value;
             const res = await fetch('/auth', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -95,13 +123,14 @@
         }
 
         function startApp() {
-            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('auth-screen').style.display = 'none';
             document.getElementById('app-screen').style.display = 'flex';
             socket.emit('join-chat', myData);
         }
 
         function logout() { localStorage.removeItem('tiksnap_user'); location.reload(); }
 
+        // Chat
         function send() {
             const i = document.getElementById('msg-in');
             if(i.value) { socket.emit('chat-message', i.value); i.value = ''; }
@@ -112,64 +141,56 @@
 
         function addMsg(m) {
             const div = document.createElement('div');
-            div.className = 'msg-bubble';
-            div.innerHTML = `<img src="${m.pfp}" class="pfp-small" data-user="${m.user}">
-                             <div class="msg-content"><b>${m.user}</b>${m.text}</div>`;
-            document.getElementById('messages').appendChild(div);
-            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+            div.className = 'msg';
+            div.innerHTML = `<img src="${m.pfp}" data-user="${m.user}"><div class="msg-content"><b>${m.user}</b>${m.text}</div>`;
+            const box = document.getElementById('messages');
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
         }
 
-        socket.on('update-user-list', users => {
-            const list = document.getElementById('online-list');
-            list.innerHTML = '';
-            users.forEach(u => {
-                const item = document.createElement('div');
-                item.style.cursor = 'pointer';
-                item.innerHTML = `<img src="${u.profilePic}" class="pfp-small" style="width:20px;height:20px"> ${u.username}`;
-                item.onclick = () => showProfile(u);
-                list.appendChild(item);
-            });
-        });
-
-        // LIVE PROFILE UPDATE (No reload needed!)
-        socket.on('user-profile-updated', (updatedUser) => {
-            // Update sidebar & chat PFP in real-time
-            document.querySelectorAll(`.pfp-small[data-user="${updatedUser.username}"]`).forEach(img => {
-                img.src = updatedUser.profilePic;
-            });
+        // Live Profile Sync
+        socket.on('user-update', (updatedUser) => {
+            document.querySelectorAll(`img[data-user="${updatedUser.username}"]`).forEach(img => img.src = updatedUser.profilePic);
             if(myData && updatedUser.username === myData.username) {
                 myData = updatedUser;
                 localStorage.setItem('tiksnap_user', JSON.stringify(myData));
             }
         });
 
-        function showProfile(u) {
+        socket.on('update-user-list', users => {
+            const list = document.getElementById('user-list');
+            list.innerHTML = '';
+            users.forEach(u => {
+                const item = document.createElement('div');
+                item.className = 'user-card';
+                item.onclick = () => openProfile(u);
+                item.innerHTML = `<img src="${u.profilePic}" style="width:30px;height:30px;border-radius:50%"> <span>${u.username}</span>`;
+                list.appendChild(item);
+            });
+        });
+
+        // Profile Modal
+        function openProfile(u) {
             document.getElementById('v-username').innerText = u.username;
             document.getElementById('v-pfp').src = u.profilePic;
-            document.getElementById('v-banner').style.background = u.banner.startsWith('data') ? `url(${u.banner}) center/cover` : u.banner;
+            document.getElementById('v-banner').style.backgroundImage = u.banner.startsWith('data') ? `url(${u.banner})` : 'none';
+            document.getElementById('v-banner').style.backgroundColor = u.banner.startsWith('#') ? u.banner : 'var(--accent)';
             
-            const bioEl = document.getElementById('v-bio');
-            bioEl.innerText = u.bio;
+            const bio = document.getElementById('v-bio');
+            bio.innerText = u.bio;
             document.getElementById('profile-modal').style.display = 'flex';
 
             if(u.username === myData.username) {
-                bioEl.contentEditable = "true";
-                bioEl.onblur = () => uploadBio(bioEl.innerText);
-                document.getElementById('v-pfp').onclick = () => document.getElementById('pfp-up').click();
-                document.getElementById('v-banner').onclick = () => document.getElementById('banner-up').click();
+                bio.contentEditable = "true";
+                bio.onblur = () => updateField('bio', bio.innerText);
             } else {
-                bioEl.contentEditable = "false";
-                document.getElementById('v-pfp').onclick = null;
-                document.getElementById('v-banner').onclick = null;
+                bio.contentEditable = "false";
             }
         }
 
-        async function uploadBio(newBio) {
-            if(newBio === myData.bio) return;
-            await silentUpdate('bio', newBio);
-        }
+        function closeProfile() { document.getElementById('profile-modal').style.display = 'none'; }
 
-        async function silentUpdate(field, value) {
+        async function updateField(field, value) {
             const res = await fetch('/update-profile', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -177,24 +198,18 @@
             });
             const d = await res.json();
             if(d.success) {
-                myData = d.user;
-                // Update local UI only
                 if(field === 'profilePic') document.getElementById('v-pfp').src = value;
-                if(field === 'banner') document.getElementById('v-banner').style.background = `url(${value}) center/cover`;
+                if(field === 'banner') document.getElementById('v-banner').style.backgroundImage = `url(${value})`;
             }
         }
 
-        function closeModal() { document.getElementById('profile-modal').style.display = 'none'; }
-
         document.getElementById('pfp-up').onchange = (e) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(e.target.files[0]);
-            reader.onload = () => silentUpdate('profilePic', reader.result);
+            const r = new FileReader(); r.readAsDataURL(e.target.files[0]);
+            r.onload = () => updateField('profilePic', r.result);
         };
         document.getElementById('banner-up').onchange = (e) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(e.target.files[0]);
-            reader.onload = () => silentUpdate('banner', reader.result);
+            const r = new FileReader(); r.readAsDataURL(e.target.files[0]);
+            r.onload = () => updateField('banner', r.result);
         };
     </script>
 </body>
