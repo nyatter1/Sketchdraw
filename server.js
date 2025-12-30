@@ -5,10 +5,15 @@ const mongoose = require('mongoose');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+// Added heartbeat settings to keep connections alive through firewalls
+const io = new Server(server, {
+    pingTimeout: 60000,
+    cors: { origin: "*" }
+});
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/connect_app')
+// Use a connection string with a long timeout for international users
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/connect_app';
+mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 10000 })
     .then(() => console.log('✅ MongoDB Connected'))
     .catch(err => console.error('❌ DB Error:', err));
 
@@ -42,13 +47,19 @@ app.post('/auth', async (req, res) => {
         const user = await User.findOne({ email: cleanEmail, password });
         if (user) return res.json({ success: true, user });
         res.json({ success: false, message: "Invalid credentials." });
-    } catch (e) { res.json({ success: false, message: "Server Error" }); }
+    } catch (e) {
+        // Detailed error reporting for your friend
+        console.error("Auth Fail:", e.message);
+        res.json({ success: false, message: `Connection Error: ${e.message}` });
+    }
 });
 
 let onlineUsers = {};
 io.on('connection', async (socket) => {
-    const history = await Message.find().sort({ _id: -1 }).limit(50);
-    socket.emit('load-history', history.reverse());
+    try {
+        const history = await Message.find().sort({ _id: -1 }).limit(50);
+        socket.emit('load-history', history.reverse());
+    } catch (err) { console.log("History load error"); }
 
     socket.on('join-chat', (user) => {
         socket.user = user;
@@ -65,10 +76,9 @@ io.on('connection', async (socket) => {
         io.emit('chat-msg', msg);
     });
 
-    // GLOBAL CLEAR LOGIC
     socket.on('request-clear-all', async () => {
-        await Message.deleteMany({}); // Delete from Database
-        io.emit('chat-cleared-globally'); // Tell everyone to wipe their screen
+        await Message.deleteMany({});
+        io.emit('chat-cleared-globally');
     });
 
     socket.on('disconnect', () => {
@@ -77,4 +87,4 @@ io.on('connection', async (socket) => {
     });
 });
 
-server.listen(process.env.PORT || 3000, () => console.log('Server running...'));
+server.listen(process.env.PORT || 3000, '0.0.0.0');
