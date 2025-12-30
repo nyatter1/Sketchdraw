@@ -10,77 +10,83 @@
     <style>
         body { font-family: 'Inter', sans-serif; background: #0f172a; height: 100vh; color: white; margin:0; overflow: hidden; }
         .glass-panel { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .message-bubble { max-width: 85%; padding: 0.75rem 1rem; border-radius: 1rem; margin-bottom: 0.25rem; word-wrap: break-word; font-size: 14px; }
-        .message-received { background: #1e293b; color: #cbd5e1; }
-        .message-sent { background: #4f46e5; color: white; align-self: flex-end; }
+        .message-bubble { max-width: 80%; padding: 0.6rem 1rem; border-radius: 1rem; margin-bottom: 0.25rem; font-size: 14px; }
+        .message-received { background: #1e293b; color: #cbd5e1; border-bottom-left-radius: 4px; }
+        .message-sent { background: #4f46e5; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
         .hidden { display: none !important; }
+        .modal-bg { background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
     </style>
 </head>
 <body class="flex items-center justify-center">
 
-    <div id="auth-screen" class="w-full max-w-md p-6">
-        <div class="glass-panel rounded-3xl p-8">
-            <h1 class="text-3xl font-bold text-center mb-2">Connect</h1>
-            <p id="net-status" class="text-[10px] text-center mb-6 text-yellow-500 italic">Connecting to server...</p>
-            
-            <div id="loginForm" class="space-y-4">
-                <input type="email" id="li-email" placeholder="Email" class="w-full bg-white/5 border border-white/10 px-4 py-3 rounded-xl outline-none focus:border-indigo-500">
-                <input type="password" id="li-pass" placeholder="Password" class="w-full bg-white/5 border border-white/10 px-4 py-3 rounded-xl outline-none focus:border-indigo-500">
-                <button onclick="handleAuth('login')" class="w-full py-3 bg-indigo-600 rounded-xl font-bold">Sign In</button>
-                <p class="text-center text-sm text-slate-400">New? <button onclick="toggleF('signup')" class="text-indigo-400 underline">Create account</button></p>
-            </div>
-
-            <div id="signupForm" class="hidden space-y-4">
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="text" id="su-first" placeholder="First" class="bg-white/5 border border-white/10 px-4 py-3 rounded-xl outline-none">
-                    <input type="text" id="su-last" placeholder="Last" class="bg-white/5 border border-white/10 px-4 py-3 rounded-xl outline-none">
+    <div id="settings-modal" class="fixed inset-0 z-50 flex items-center justify-center modal-bg hidden">
+        <div class="glass-panel p-8 rounded-3xl w-full max-w-sm">
+            <h2 class="text-xl font-bold mb-6">Profile Settings</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-slate-400">First Name</label>
+                    <input type="text" id="set-first" class="w-full bg-white/5 border border-white/10 p-2 rounded-lg outline-none">
                 </div>
+                <div>
+                    <label class="text-xs text-slate-400">Last Name</label>
+                    <input type="text" id="set-last" class="w-full bg-white/5 border border-white/10 p-2 rounded-lg outline-none">
+                </div>
+                <button onclick="saveSettings()" class="w-full py-2 bg-indigo-600 rounded-lg font-bold">Save Changes</button>
+                <button onclick="toggleSettings()" class="w-full py-2 text-slate-400 text-sm">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="auth-screen" class="w-full max-w-md p-6">
+        <div class="glass-panel rounded-3xl p-8 text-center">
+            <h1 class="text-3xl font-bold mb-8">Connect</h1>
+            <div id="loginForm" class="space-y-4">
+                <input type="email" id="li-email" placeholder="Email" class="w-full bg-white/5 border border-white/10 px-4 py-3 rounded-xl outline-none">
+                <input type="password" id="li-pass" placeholder="Password" class="w-full bg-white/5 border border-white/10 px-4 py-3 rounded-xl outline-none">
+                <button onclick="handleAuth('login')" class="w-full py-3 bg-indigo-600 rounded-xl font-bold">Sign In</button>
+                <p class="text-sm text-slate-400">New? <button onclick="toggleF('signup')" class="text-indigo-400 underline">Create account</button></p>
+            </div>
+            <div id="signupForm" class="hidden space-y-4">
+                <div class="grid grid-cols-2 gap-2"><input type="text" id="su-first" placeholder="First" class="bg-white/5 border border-white/10 px-4 py-3 rounded-xl outline-none"><input type="text" id="su-last" placeholder="Last" class="bg-white/5 border border-white/10 px-4 py-3 rounded-xl outline-none"></div>
                 <input type="email" id="su-email" placeholder="Email" class="w-full bg-white/5 border border-white/10 px-4 py-3 rounded-xl outline-none">
                 <input type="password" id="su-pass" placeholder="Password" class="w-full bg-white/5 border border-white/10 px-4 py-3 rounded-xl outline-none">
-                <button onclick="handleAuth('signup')" class="w-full py-3 bg-indigo-600 rounded-xl font-bold">Join Now</button>
-                <button onclick="toggleF('login')" class="w-full text-xs text-slate-500">Back to Login</button>
+                <button onclick="handleAuth('signup')" class="w-full py-3 bg-indigo-600 rounded-xl font-bold">Join</button>
             </div>
         </div>
     </div>
 
     <div id="app-screen" class="hidden w-full h-full flex">
         <aside id="sidebar" class="w-64 h-full glass-panel flex flex-col border-r border-white/10">
-            <div class="p-6 font-bold text-lg border-b border-white/5">Online</div>
-            <div id="user-list" class="flex-1 px-6 py-4 space-y-3 overflow-y-auto"></div>
-            <div class="p-4 border-t border-white/10">
-                <p id="my-name" class="text-sm font-bold truncate"></p>
-                <button onclick="logout()" class="text-xs text-red-400">Logout</button>
+            <div class="p-6 font-bold text-lg border-b border-white/5 flex justify-between items-center">
+                <span>Online</span>
+                <button onclick="toggleSettings()" class="p-2 hover:bg-white/10 rounded-full">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </button>
+            </div>
+            <div id="user-list" class="flex-1 px-6 py-4 space-y-3"></div>
+            <div class="p-4 border-t border-white/10 flex items-center gap-3">
+                <img id="my-pfp" src="default.png" class="w-8 h-8 rounded-full border border-indigo-500">
+                <div class="flex-1 truncate text-sm font-bold" id="my-name"></div>
+                <button onclick="logout()" class="text-xs text-red-400">Exit</button>
             </div>
         </aside>
 
         <main class="flex-1 flex flex-col h-full bg-slate-900/50">
             <header class="h-16 glass-panel px-6 flex items-center justify-between">
                 <span class="font-bold"># general-chat</span>
-                <button onclick="requestGlobalClear()" class="text-[10px] font-bold text-red-400 border border-red-400/30 px-2 py-1 rounded hover:bg-red-400/10">CLEAR ALL</button>
+                <button onclick="socket.emit('request-clear-all')" class="text-[10px] text-red-400 uppercase font-bold border border-red-400/20 px-2 py-1 rounded">Clear All</button>
             </header>
             <div id="messageDisplay" class="flex-1 overflow-y-auto p-6 flex flex-col"></div>
-            <div class="p-4 bg-slate-900/80">
-                <form onsubmit="sendMsg(event)" class="max-w-4xl mx-auto flex gap-2 bg-white/5 border border-white/10 p-2 rounded-2xl">
-                    <input type="text" id="msg-in" placeholder="Message..." class="flex-1 bg-transparent outline-none px-3">
-                    <button type="submit" class="bg-indigo-600 px-4 py-2 rounded-xl font-bold">Send</button>
-                </form>
-            </div>
+            <div class="p-4"><form onsubmit="sendMsg(event)" class="max-w-4xl mx-auto flex gap-2 bg-white/5 border border-white/10 p-2 rounded-2xl">
+                <input type="text" id="msg-in" placeholder="Message..." class="flex-1 bg-transparent outline-none px-3">
+                <button type="submit" class="bg-indigo-600 px-4 py-2 rounded-xl font-bold">Send</button>
+            </form></div>
         </main>
     </div>
 
     <script>
         const socket = io();
         let myData = null;
-
-        // Check connection status for your friend in Russia
-        socket.on('connect', () => {
-            document.getElementById('net-status').innerText = "Connected to Server ✅";
-            document.getElementById('net-status').className = "text-[10px] text-center mb-6 text-emerald-500";
-        });
-        socket.on('connect_error', () => {
-            document.getElementById('net-status').innerText = "Server Unreachable (Firewall?) ❌";
-            document.getElementById('net-status').className = "text-[10px] text-center mb-6 text-red-500";
-        });
 
         window.onload = () => {
             const saved = localStorage.getItem('connect_user');
@@ -92,43 +98,51 @@
             document.getElementById('signupForm').classList.toggle('hidden', v === 'login');
         }
 
-        function requestGlobalClear() {
-            if(confirm("Wipe chat for everyone?")) socket.emit('request-clear-all');
+        function toggleSettings() {
+            const modal = document.getElementById('settings-modal');
+            modal.classList.toggle('hidden');
+            if(!modal.classList.contains('hidden')) {
+                document.getElementById('set-first').value = myData.firstName;
+                document.getElementById('set-last').value = myData.lastName;
+            }
         }
 
-        socket.on('chat-cleared-globally', () => {
-            document.getElementById('messageDisplay').innerHTML = '<div class="text-center text-red-400 text-[10px] my-4 font-bold uppercase tracking-widest">Chat history wiped</div>';
-        });
+        async function saveSettings() {
+            const firstName = document.getElementById('set-first').value;
+            const lastName = document.getElementById('set-last').value;
+            const res = await fetch('/update-settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email: myData.email, firstName, lastName })
+            });
+            const data = await res.json();
+            if(data.success) {
+                myData = data.user;
+                localStorage.setItem('connect_user', JSON.stringify(myData));
+                location.reload();
+            }
+        }
 
         async function handleAuth(type) {
             const email = document.getElementById(type === 'login' ? 'li-email' : 'su-email').value;
             const password = document.getElementById(type === 'login' ? 'li-pass' : 'su-pass').value;
             const firstName = type === 'signup' ? document.getElementById('su-first').value : '';
             const lastName = type === 'signup' ? document.getElementById('su-last').value : '';
-
-            try {
-                const res = await fetch('/auth', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ email, password, firstName, lastName, type })
-                });
-                const data = await res.json();
-                if(data.success) {
-                    myData = data.user;
-                    localStorage.setItem('connect_user', JSON.stringify(myData));
-                    launch();
-                } else {
-                    alert(data.message); // This will show the real error reason
-                }
-            } catch (e) {
-                alert("The server is not responding to your request. If you are in Russia, please try a VPN.");
-            }
+            const res = await fetch('/auth', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email, password, firstName, lastName, type })
+            });
+            const data = await res.json();
+            if(data.success) { myData = data.user; localStorage.setItem('connect_user', JSON.stringify(myData)); launch(); }
+            else alert(data.message);
         }
 
         function launch() {
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('app-screen').classList.remove('hidden');
-            document.getElementById('my-name').innerText = myData.firstName + " " + myData.lastName;
+            document.getElementById('my-name').innerText = `${myData.firstName} ${myData.lastName}`;
+            document.getElementById('my-pfp').src = myData.pfp || 'default.png';
             socket.emit('join-chat', myData);
         }
 
@@ -140,14 +154,19 @@
 
         socket.on('chat-msg', m => render(m));
         socket.on('load-history', msgs => msgs.forEach(m => render(m)));
+        socket.on('chat-cleared-globally', () => document.getElementById('messageDisplay').innerHTML = '');
 
         function render(m) {
             const isMe = m.email === myData.email;
             const time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const html = `<div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-3">
-                <span class="text-[10px] text-slate-500 mb-1 px-1">${isMe ? 'You' : m.user} • ${time}</span>
-                <div class="message-bubble ${isMe ? 'message-sent' : 'message-received'}">${m.text}</div>
-            </div>`;
+            const html = `
+                <div class="flex gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'} mb-4">
+                    <img src="${m.pfp || 'default.png'}" class="w-8 h-8 rounded-full border border-white/10 self-end">
+                    <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+                        <span class="text-[10px] text-slate-500 mb-1 px-1">${m.user} • ${time}</span>
+                        <div class="message-bubble ${isMe ? 'message-sent' : 'message-received'}">${m.text}</div>
+                    </div>
+                </div>`;
             const box = document.getElementById('messageDisplay');
             box.insertAdjacentHTML('beforeend', html);
             box.scrollTop = box.scrollHeight;
@@ -155,9 +174,10 @@
 
         socket.on('update-users', users => {
             document.getElementById('user-list').innerHTML = users.map(u => `
-                <div class="flex items-center gap-2 p-1">
-                    <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-                    <div class="text-sm text-slate-300">${u.firstName} ${u.lastName}</div>
+                <div class="flex items-center gap-3">
+                    <img src="${u.pfp || 'default.png'}" class="w-6 h-6 rounded-full border border-white/5">
+                    <span class="text-sm text-slate-300 font-medium">${u.firstName}</span>
+                    <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full ml-auto"></div>
                 </div>
             `).join('');
         });
