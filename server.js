@@ -1,19 +1,22 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 const app = express();
 
+// Handle large image uploads
 app.use(express.json({ limit: '50mb' })); 
 app.use(cors());
 app.use(express.static('public'));
 
-// 1. DATABASE CONNECTION
-// REPLACE 'YOUR_MONGODB_URL' with your real connection string from Atlas
-mongoose.connect('YOUR_MONGODB_URL')
-    .then(() => console.log("Database Connected!"))
-    .catch(err => console.error("DB Error:", err));
+// --- CONNECT TO MONGODB ---
+const MONGO_URI = 'mongodb+srv://hayden:123password123@cluster0.kzhhujn.mongodb.net/nyatter?retryWrites=true&w=majority&appName=Cluster0'; 
 
-// 2. DATA SCHEMA
+mongoose.connect(MONGO_URI)
+    .then(() => console.log("✅ Nyatter Database Connected!"))
+    .catch(err => console.error("❌ DB Connection Error:", err));
+
+// --- DATA SCHEMA ---
 const Post = mongoose.model('Post', new mongoose.Schema({
     user: String,
     text: String,
@@ -24,16 +27,24 @@ const Post = mongoose.model('Post', new mongoose.Schema({
     timestamp: { type: Number, default: Date.now }
 }));
 
-// 3. ROUTES
+// --- API ROUTES ---
 app.get('/api/posts', async (req, res) => {
-    const posts = await Post.find().sort({ pinned: -1, timestamp: -1 });
-    res.json(posts);
+    try {
+        const posts = await Post.find().sort({ pinned: -1, timestamp: -1 });
+        res.json(posts);
+    } catch (err) {
+        res.status(500).json({ error: "Fetch failed" });
+    }
 });
 
 app.post('/api/posts', async (req, res) => {
-    const newPost = new Post(req.body);
-    await newPost.save();
-    res.status(201).json(newPost);
+    try {
+        const newPost = new Post(req.body);
+        await newPost.save();
+        res.status(201).json(newPost);
+    } catch (err) {
+        res.status(500).json({ error: "Post failed" });
+    }
 });
 
 app.post('/api/posts/like', async (req, res) => {
@@ -57,4 +68,4 @@ app.post('/api/posts/reply', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Nyatter Server running on ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
