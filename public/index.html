@@ -3,241 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nyatter / Quantum Hub</title>
+    <title>Nyatter / Quantum Admin v5.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@300;400;600;900&display=swap" rel="stylesheet">
     <style>
-        /* --- DESIGN SYSTEM --- */
         :root {
-            --glass: rgba(10, 10, 18, 0.7);
-            --glass-strong: rgba(5, 5, 10, 0.9);
-            --border: rgba(255, 255, 255, 0.08);
+            --bg: #020617;
+            --glass: rgba(15, 23, 42, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
             --accent: #6366f1;
-            --accent-glow: rgba(99, 102, 241, 0.4);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            user-select: none;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --admin-pink: #f472b6;
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: #020617;
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.1) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 40%);
-            color: #f8fafc;
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(244, 114, 182, 0.1) 0px, transparent 50%);
+            color: #f1f5f9;
             height: 100vh;
             overflow: hidden;
         }
 
-        /* --- SCROLLBAR --- */
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        h1, h2, h3, .font-heading { font-family: 'Space Grotesk', sans-serif; }
+
+        /* --- GLOBAL GLASSMORPHISM --- */
+        .glass { background: var(--glass); backdrop-filter: blur(25px); border: 1px solid var(--glass-border); }
+        .glass-heavy { background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(40px); border: 1px solid var(--glass-border); }
+        
+        /* --- CUSTOM SCROLL --- */
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
         /* --- UI COMPONENTS --- */
-        .glass { background: var(--glass); backdrop-filter: blur(20px); border: 1px solid var(--border); }
-        .glass-strong { background: var(--glass-strong); backdrop-filter: blur(40px); border: 1px solid var(--border); }
-        
+        .btn-action {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+        .btn-action:hover { transform: translateY(-2px); box-shadow: 0 8px 25px var(--accent-glow); filter: brightness(1.1); }
+        .btn-action:active { transform: translateY(0); }
+
         .rainbow-text {
-            background: linear-gradient(90deg, #ff4d4d, #f97316, #fbbf24, #4ade80, #60a5fa, #a855f7);
+            background: linear-gradient(to right, #6366f1, #a855f7, #f472b6, #fb923c);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-weight: 800;
+            font-weight: 900;
         }
 
-        .btn-glow {
-            background: var(--accent);
-            box-shadow: 0 0 15px var(--accent-glow);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .input-glow {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s;
         }
-        .btn-glow:hover { transform: translateY(-2px); box-shadow: 0 0 25px var(--accent-glow); filter: brightness(1.1); }
-        .btn-glow:active { transform: translateY(0px); }
+        .input-glow:focus { border-color: var(--accent); box-shadow: 0 0 15px var(--accent-glow); }
 
-        .input-dark {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--border);
-            color: white;
-            outline: none;
-            transition: border 0.3s;
-        }
-        .input-dark:focus { border-color: var(--accent); }
-
-        .post-card {
-            border-bottom: 1px solid var(--border);
-            transition: background 0.2s ease;
-        }
+        /* --- POST CARDS --- */
+        .post-card { border-bottom: 1px solid var(--glass-border); transition: background 0.3s; }
         .post-card:hover { background: rgba(255, 255, 255, 0.02); }
+        .pfp-main { width: 50px; height: 50px; border-radius: 16px; object-fit: cover; background: #1e293b; border: 1px solid var(--glass-border); }
+        .pfp-reply { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; }
 
-        .pfp-large { width: 100px; height: 100px; border-radius: 30%; object-fit: cover; border: 2px solid var(--accent); }
-        .pfp-nav { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; }
-        .pfp-feed { width: 48px; height: 48px; border-radius: 14px; object-fit: cover; background: #1e293b; }
-
-        /* --- TAGS --- */
-        .my-tag { background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.2); padding: 0 4px; border-radius: 4px; font-weight: 600; }
-        .other-tag { color: #818cf8; font-weight: 700; }
-        .dev-badge { background: linear-gradient(135deg, #6366f1, #a855f7); color: white; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; }
-
-        /* --- MODAL LOGIC --- */
+        /* --- MODALS --- */
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px);
+            z-index: 500;
             display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease;
             align-items: center;
             justify-content: center;
-            opacity: 0;
-            transition: opacity 0.3s;
         }
         .modal-overlay.active { display: flex; opacity: 1; }
+        
+        /* --- TAGS --- */
+        .tag-me { background: rgba(99, 102, 241, 0.15); color: #818cf8; padding: 2px 6px; border-radius: 6px; font-weight: 600; }
+        .tag-user { color: #f472b6; font-weight: 700; }
+        .badge-dev { background: linear-gradient(90deg, #6366f1, #f472b6); color: white; font-size: 10px; padding: 2px 8px; border-radius: 6px; font-weight: 900; text-transform: uppercase; }
 
-        #notif-dot { position: absolute; top: 0; right: 0; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; display: none; border: 2px solid #020617; }
+        #notif-dot { position: absolute; top: 0; right: 0; width: 8px; height: 8px; background: #f43f5e; border-radius: 50%; display: none; box-shadow: 0 0 10px #f43f5e; }
     </style>
 </head>
-<body class="flex justify-center">
+<body class="flex justify-center overflow-hidden">
 
-    <div id="auth-ui" class="fixed inset-0 z-[2000] flex items-center justify-center glass-strong">
-        <div class="w-full max-w-[420px] p-8 rounded-[2.5rem] text-center">
-            <h1 class="text-6xl mb-4 rainbow-text tracking-tighter">NYATTER</h1>
-            <p class="text-slate-400 mb-10 text-sm font-medium tracking-widest uppercase">The Quantum Protocol</p>
+    <div id="auth-gate" class="fixed inset-0 z-[1000] flex items-center justify-center glass-heavy">
+        <div class="w-full max-w-md p-10 text-center animate-in fade-in duration-700">
+            <h1 class="text-7xl mb-2 rainbow-text tracking-tighter">NYATTER</h1>
+            <p class="text-slate-500 font-bold tracking-[0.3em] uppercase text-[10px] mb-12">The Social Frequency</p>
 
-            <div id="login-view" class="space-y-4">
-                <input type="text" id="log-id" placeholder="Username or Email" class="w-full p-4 rounded-2xl input-dark">
-                <input type="password" id="log-pass" placeholder="Password" class="w-full p-4 rounded-2xl input-dark">
-                <button onclick="handleLogin()" class="w-full py-4 rounded-2xl btn-glow font-bold text-white uppercase tracking-wider">Establish Link</button>
-                <p class="text-slate-500 text-sm">New to the grid? <button onclick="swapAuth()" class="text-indigo-400 font-bold">Register Identity</button></p>
+            <div id="view-login" class="space-y-4">
+                <input type="text" id="in-log-id" placeholder="Username / Email" class="w-full p-4 rounded-2xl input-glow text-white">
+                <input type="password" id="in-log-pass" placeholder="Security Passphrase" class="w-full p-4 rounded-2xl input-glow text-white">
+                <button onclick="authLogin()" class="w-full py-4 rounded-2xl btn-action font-bold text-white uppercase tracking-widest text-sm">Initialize Session</button>
+                <p class="text-slate-500 text-sm mt-6">Missing Signal? <button onclick="toggleAuth()" class="text-indigo-400 font-bold hover:underline">Create Identity</button></p>
             </div>
 
-            <div id="signup-view" class="hidden space-y-4">
+            <div id="view-signup" class="hidden space-y-4">
                 <div class="flex justify-center mb-6">
-                    <label class="cursor-pointer group relative">
-                        <img id="signup-preview" src="https://via.placeholder.com/150/1e293b/ffffff?text=+" class="pfp-large shadow-2xl transition-all group-hover:scale-105">
-                        <input type="file" id="signup-file" class="hidden" accept="image/*" onchange="previewImg(event, 'signup-preview')">
-                        <div class="absolute inset-0 flex items-center justify-center bg-black/40 rounded-[30%] opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span class="text-[10px] font-black uppercase">Upload PFP</span>
-                        </div>
+                    <label class="relative cursor-pointer group">
+                        <img id="signup-pfp-preview" src="https://via.placeholder.com/150/1e293b/ffffff?text=+" class="w-24 h-24 rounded-[30%] object-cover border-2 border-dashed border-slate-700 group-hover:border-indigo-500 transition-all">
+                        <input type="file" id="signup-pfp-file" class="hidden" accept="image/*" onchange="handlePfpPreview(event, 'signup-pfp-preview')">
+                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded-[30%] flex items-center justify-center text-[10px] font-black uppercase transition-opacity">Upload</div>
                     </label>
                 </div>
-                <input type="text" id="reg-user" placeholder="Username" class="w-full p-3 rounded-xl input-dark">
-                <input type="email" id="reg-email" placeholder="Email Address" class="w-full p-3 rounded-xl input-dark">
-                <input type="password" id="reg-pass" placeholder="Password" class="w-full p-3 rounded-xl input-dark">
-                <button onclick="handleSignup()" class="w-full py-4 rounded-2xl btn-glow font-bold text-white uppercase tracking-wider">Initialize User</button>
-                <p class="text-slate-500 text-sm">Already mapped? <button onclick="swapAuth()" class="text-indigo-400 font-bold">Back to Login</button></p>
+                <input type="text" id="in-reg-user" placeholder="Choose Callsign" class="w-full p-3 rounded-xl input-glow text-white">
+                <input type="email" id="in-reg-email" placeholder="Grid Email" class="w-full p-3 rounded-xl input-glow text-white">
+                <input type="password" id="in-reg-pass" placeholder="Create Passphrase" class="w-full p-3 rounded-xl input-glow text-white">
+                <button onclick="authSignup()" class="w-full py-4 rounded-2xl btn-action font-bold text-white uppercase tracking-widest text-sm">Establish Link</button>
+                <p class="text-slate-500 text-sm mt-6">Existing User? <button onclick="toggleAuth()" class="text-indigo-400 font-bold hover:underline">Access Login</button></p>
             </div>
             
-            <p id="auth-err" class="hidden mt-4 text-red-400 text-xs font-bold"></p>
+            <div id="auth-error" class="hidden mt-6 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs font-bold"></div>
         </div>
     </div>
 
-    <div id="modal-notif" class="modal-overlay" onclick="closeModals()">
-        <div class="w-full max-w-md glass-strong p-8 rounded-[3rem] shadow-2xl relative" onclick="event.stopPropagation()">
-            <button onclick="closeModals()" class="absolute top-6 right-6 text-slate-500 hover:text-white">✕</button>
-            <h2 class="text-2xl font-black mb-6">Alert History</h2>
-            <div id="notif-list" class="space-y-3 max-h-[400px] overflow-y-auto custom-scroll"></div>
+    <div id="modal-admin" class="modal-overlay" onclick="closeAllModals()">
+        <div class="w-full max-w-2xl glass-heavy p-10 rounded-[3rem] shadow-2xl relative border-t-4 border-pink-500" onclick="event.stopPropagation()">
+            <button onclick="closeAllModals()" class="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors text-2xl">✕</button>
+            
+            <div class="flex items-center gap-4 mb-10">
+                <div class="w-12 h-12 bg-pink-500/20 rounded-2xl flex items-center justify-center text-2xl">⚡</div>
+                <div>
+                    <h2 class="text-3xl font-black text-white">Core Control</h2>
+                    <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Administrative Privileges Active</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6">
+                <div class="p-6 rounded-3xl bg-red-500/5 border border-red-500/20 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-red-400 font-bold mb-2">Nuclear Option</h3>
+                        <p class="text-xs text-slate-500">Deletes all users, posts, and notifications permanently.</p>
+                    </div>
+                    <button onclick="adminWipeAll()" class="mt-6 w-full py-3 bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all">Execute System Wipe</button>
+                </div>
+
+                <div class="p-6 rounded-3xl bg-indigo-500/5 border border-indigo-500/20">
+                    <h3 class="text-indigo-400 font-bold mb-2">Target Deletion</h3>
+                    <input type="text" id="admin-target-user" placeholder="Enter Username..." class="w-full bg-black/40 border border-white/5 p-3 rounded-xl text-xs text-white mb-3 outline-none focus:border-indigo-500">
+                    <button onclick="adminDeleteUser()" class="w-full py-3 bg-indigo-500/20 hover:bg-indigo-500 text-indigo-400 hover:text-white rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all">Purge User Identity</button>
+                </div>
+            </div>
+
+            <div class="mt-8 p-6 glass rounded-3xl">
+                <h3 class="text-slate-400 font-bold text-xs mb-4 uppercase tracking-widest">Grid Status</h3>
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-500">Database Connection</span>
+                    <span class="text-emerald-400 font-bold font-mono">STABLE // QUANTUM-LINKED</span>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div id="modal-settings" class="modal-overlay">
-        <div class="w-full max-w-md glass-strong p-10 rounded-[3rem] shadow-2xl relative text-center">
-            <button onclick="closeModals()" class="absolute top-6 right-6 text-slate-500 hover:text-white">✕</button>
-            <h2 class="text-2xl font-black mb-8">Profile Synthesis</h2>
+    <div id="modal-notifs" class="modal-overlay" onclick="closeAllModals()">
+        <div class="w-full max-w-md glass-heavy p-8 rounded-[2.5rem] shadow-2xl relative" onclick="event.stopPropagation()">
+            <button onclick="closeAllModals()" class="absolute top-6 right-6 text-slate-500 hover:text-white">✕</button>
+            <h2 class="text-2xl font-black mb-6 flex items-center gap-3">🔔 Frequency Alerts</h2>
+            <div id="notif-stream" class="space-y-3 max-h-[400px] overflow-y-auto custom-scroll pr-2"></div>
+        </div>
+    </div>
+
+    <div id="modal-settings" class="modal-overlay" onclick="closeAllModals()">
+        <div class="w-full max-w-md glass-heavy p-10 rounded-[3rem] shadow-2xl relative text-center" onclick="event.stopPropagation()">
+            <button onclick="closeAllModals()" class="absolute top-8 right-8 text-slate-500 hover:text-white">✕</button>
+            <h2 class="text-2xl font-black mb-8">Identity Synthesis</h2>
 
             <div class="flex justify-center mb-8">
                 <label class="cursor-pointer group relative">
-                    <img id="edit-preview" src="" class="pfp-large">
-                    <input type="file" id="edit-file" class="hidden" accept="image/*" onchange="previewImg(event, 'edit-preview')">
-                    <div class="absolute inset-0 flex items-center justify-center bg-black/40 rounded-[30%] opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span class="text-[10px] font-black uppercase">Change</span>
-                    </div>
+                    <img id="settings-pfp-preview" src="" class="w-24 h-24 rounded-[30%] object-cover border-2 border-indigo-500/50 group-hover:scale-105 transition-transform">
+                    <input type="file" id="settings-pfp-file" class="hidden" accept="image/*" onchange="handlePfpPreview(event, 'settings-pfp-preview')">
+                    <div class="absolute inset-0 bg-black/40 rounded-[30%] opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] font-black uppercase transition-opacity">Swap</div>
                 </label>
             </div>
 
-            <div class="space-y-4">
-                <div class="text-left">
-                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Update Callsign</label>
-                    <input type="text" id="edit-user" class="w-full p-4 rounded-2xl input-dark mt-1">
+            <div class="space-y-4 text-left">
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">Update Callsign</label>
+                    <input type="text" id="set-username" class="w-full p-4 rounded-2xl input-glow mt-1 text-white">
                 </div>
-                <div class="text-left">
-                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Secure Passphrase</label>
-                    <input type="password" id="edit-pass" placeholder="Enter new password" class="w-full p-4 rounded-2xl input-dark mt-1">
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">New Passphrase</label>
+                    <input type="password" id="set-password" placeholder="Leave blank to keep current" class="w-full p-4 rounded-2xl input-glow mt-1 text-white">
                 </div>
-                <button onclick="saveSettings()" class="w-full py-4 rounded-2xl btn-glow font-black text-white uppercase tracking-widest mt-4">Save Parameters</button>
+                <button onclick="updateProfile()" class="w-full py-4 rounded-2xl btn-action font-black text-white uppercase tracking-widest mt-6">Save Changes</button>
             </div>
         </div>
     </div>
 
-    <div id="app-ui" class="hidden w-full max-w-[1400px] h-screen flex relative">
+    <div id="app-grid" class="hidden w-full max-w-[1400px] h-screen flex">
         
         <aside class="w-[280px] flex flex-col p-8 border-r border-white/5 bg-slate-900/20">
-            <div class="mb-12"><span class="text-2xl rainbow-text">NYATTER</span></div>
+            <div class="mb-14 px-2">
+                <span class="text-3xl rainbow-text">NYATTER</span>
+            </div>
             
             <nav class="flex-1 space-y-2">
                 <div class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-white font-bold cursor-pointer">
-                    <span>🏠</span> Feed
+                    <span class="text-xl">🏠</span> Home Stream
                 </div>
                 <div onclick="openNotifs()" class="relative flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer">
-                    <span>🔔</span> Notifications
+                    <span class="text-xl">🔔</span> Alerts
                     <div id="notif-dot"></div>
+                </div>
+                <div id="nav-admin-btn" onclick="openAdmin()" class="hidden flex items-center gap-4 px-6 py-4 rounded-2xl text-pink-400 hover:bg-pink-500/10 transition-all cursor-pointer border border-transparent hover:border-pink-500/30">
+                    <span class="text-xl">⚡</span> Core Control
                 </div>
             </nav>
 
-            <div onclick="openSettings()" class="p-4 rounded-[2rem] glass cursor-pointer group hover:border-indigo-500/50 transition-all">
+            <div onclick="openSettings()" class="mt-auto p-4 rounded-[2rem] glass cursor-pointer group hover:border-indigo-500/50 transition-all">
                 <div class="flex items-center gap-3">
-                    <img id="nav-pfp" src="" class="pfp-nav border border-white/10 group-hover:rotate-6 transition-transform">
+                    <img id="nav-pfp" src="" class="w-10 h-10 rounded-xl object-cover border border-white/10">
                     <div class="overflow-hidden">
-                        <p class="font-bold text-sm truncate" id="nav-user"></p>
-                        <div id="nav-dev" class="hidden"><span class="dev-badge">Core Admin</span></div>
+                        <p class="font-bold text-sm truncate text-white" id="nav-username-display"></p>
+                        <div id="nav-is-dev" class="hidden"><span class="badge-dev">Admin</span></div>
                     </div>
                 </div>
-                <button onclick="logout()" class="w-full mt-4 py-2 text-[10px] font-black text-red-400/50 hover:text-red-400 uppercase tracking-widest transition-colors">Disconnect</button>
+                <button onclick="appLogout()" class="w-full mt-4 py-2 text-[9px] font-black text-slate-500 hover:text-red-400 uppercase tracking-widest transition-colors">Disconnect Signal</button>
             </div>
         </aside>
 
-        <main class="flex-1 flex flex-col border-r border-white/5 bg-black/20">
+        <main class="flex-1 flex flex-col border-r border-white/5 bg-black/10">
             <header class="p-6 glass border-x-0 border-t-0 flex justify-between items-center sticky top-0 z-50">
-                <h2 class="text-xl font-black tracking-tight">GLOBAL STREAM</h2>
-                <div class="text-[10px] font-black text-slate-500 bg-white/5 px-3 py-1 rounded-full border border-white/10">V4.0 QUANTUM</div>
+                <h2 class="text-xl font-black text-white tracking-tight">GLOBAL FEED</h2>
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                    <span class="text-[10px] font-black text-slate-500 tracking-widest">LIVE FREQUENCY</span>
+                </div>
             </header>
 
-            <div class="flex-1 overflow-y-auto custom-scroll" id="feed-scroll">
+            <div class="flex-1 overflow-y-auto custom-scroll" id="feed-scroller">
                 <div class="p-8 border-b border-white/5 bg-white/[0.01]">
                     <div class="flex gap-6">
-                        <img id="comp-pfp" src="" class="pfp-feed shadow-xl">
+                        <img id="composer-pfp" src="" class="pfp-main shadow-2xl">
                         <div class="flex-1">
-                            <textarea id="post-input" placeholder="Broadcast to the network..." class="w-full bg-transparent text-xl outline-none resize-none h-24 pt-2 text-white placeholder-slate-700"></textarea>
-                            <div id="post-preview" class="mb-4"></div>
+                            <textarea id="post-text-in" placeholder="What's resonating in your sector?" class="w-full bg-transparent text-xl outline-none resize-none h-24 pt-2 text-white placeholder-slate-700"></textarea>
+                            <div id="composer-img-preview" class="mb-4"></div>
                             
                             <div class="flex justify-between items-center pt-4 border-t border-white/5">
-                                <label class="p-2 hover:bg-white/5 rounded-xl cursor-pointer transition-all text-xl">
-                                    🖼️<input type="file" class="hidden" accept="image/*" onchange="previewImg(event, 'post-preview-img')">
+                                <label class="p-3 hover:bg-white/5 rounded-2xl cursor-pointer transition-all text-xl text-slate-500 hover:text-indigo-400">
+                                    🖼️<input type="file" class="hidden" accept="image/*" onchange="handlePostImgPreview(event)">
                                 </label>
-                                <button onclick="transmit()" class="px-10 py-3 rounded-full btn-glow font-black text-white text-xs uppercase tracking-widest">Transmit</button>
+                                <button onclick="appPost()" class="px-10 py-3 rounded-full btn-action font-black text-white text-xs uppercase tracking-widest">Broadcast</button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div id="feed-list" class="divide-y divide-white/5"></div>
+                <div id="post-stream-container" class="divide-y divide-white/5"></div>
             </div>
         </main>
 
         <aside class="w-[340px] p-8 hidden lg:block bg-slate-900/10">
-            <div class="glass rounded-[2.5rem] p-6 h-full flex flex-col">
-                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-8 flex items-center gap-2">
-                    <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
-                    Network Directory
+            <div class="glass rounded-[3rem] p-8 h-full flex flex-col shadow-2xl">
+                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-10 flex items-center gap-3">
+                    <span class="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                    Sector Directory
                 </h3>
-                <div id="user-list" class="space-y-4 overflow-y-auto custom-scroll flex-1 pr-2"></div>
+                <div id="sidebar-user-list" class="space-y-5 overflow-y-auto custom-scroll flex-1 pr-2"></div>
                 
                 <div class="mt-8 pt-8 border-t border-white/5 text-center">
-                    <p class="text-[10px] text-slate-600 font-bold uppercase tracking-widest">Encrypted Terminal</p>
+                    <p class="text-[9px] text-slate-600 font-bold uppercase tracking-widest">Quantum Encryption Active</p>
                 </div>
             </div>
         </aside>
@@ -245,42 +277,56 @@
     </div>
 
     <script>
-        let USER = null;
-        let USER_DATA = {}; // Cache for {username: pfp}
-        let TEMP_PFP = null;
-        let IS_REPLYING = false;
-        const DEV_NAME = "HaydenDev";
+        // --- GLOBAL STATE ---
+        let CURRENT_USER = null;
+        let USER_PFP_CACHE = {}; // Map of username -> pfp
+        let ACTIVE_POST_IMG = null;
+        let IS_INPUT_ACTIVE = false;
 
-        // --- AUTH LOGIC ---
-        function swapAuth() {
-            document.getElementById('login-view').classList.toggle('hidden');
-            document.getElementById('signup-view').classList.toggle('hidden');
-            document.getElementById('auth-err').classList.add('hidden');
+        // --- AUTH UI LOGIC ---
+        function toggleAuth() {
+            document.getElementById('view-login').classList.toggle('hidden');
+            document.getElementById('view-signup').classList.toggle('hidden');
+            document.getElementById('auth-error').classList.add('hidden');
         }
 
-        function previewImg(e, targetId) {
+        function handlePfpPreview(e, imgId) {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = () => { document.getElementById(imgId).src = reader.result; };
+            reader.readAsDataURL(file);
+        }
+
+        function handlePostImgPreview(e) {
             const file = e.target.files[0];
             if(!file) return;
             const reader = new FileReader();
             reader.onload = () => {
-                const data = reader.result;
-                if(targetId === 'post-preview-img') {
-                    TEMP_PFP = data;
-                    document.getElementById('post-preview').innerHTML = `<img src="${data}" class="w-full rounded-2xl mt-4 border border-white/10">`;
-                } else {
-                    document.getElementById(targetId).src = data;
-                }
+                ACTIVE_POST_IMG = reader.result;
+                document.getElementById('composer-img-preview').innerHTML = `
+                    <div class="relative inline-block mt-4">
+                        <img src="${ACTIVE_POST_IMG}" class="w-full max-h-[300px] rounded-2xl border border-white/10 shadow-2xl">
+                        <button onclick="clearPostImg()" class="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full font-bold">✕</button>
+                    </div>
+                `;
             };
             reader.readAsDataURL(file);
         }
 
-        async function handleSignup() {
-            const username = document.getElementById('reg-user').value.trim();
-            const email = document.getElementById('reg-email').value.trim();
-            const password = document.getElementById('reg-pass').value.trim();
-            const pfp = document.getElementById('signup-preview').src;
+        function clearPostImg() {
+            ACTIVE_POST_IMG = null;
+            document.getElementById('composer-img-preview').innerHTML = "";
+        }
 
-            if(!username || !password) return showErr("Identity parameters missing.");
+        // --- AUTH ACTIONS ---
+        async function authSignup() {
+            const username = document.getElementById('in-reg-user').value.trim();
+            const email = document.getElementById('in-reg-email').value.trim();
+            const password = document.getElementById('in-reg-pass').value.trim();
+            const pfp = document.getElementById('signup-pfp-preview').src;
+
+            if(!username || !password) return showAuthErr("Credentials incomplete.");
 
             const res = await fetch('/api/signup', {
                 method: 'POST',
@@ -288,13 +334,13 @@
                 body: JSON.stringify({ username, email, password, pfp })
             });
             const data = await res.json();
-            if(data.error) return showErr(data.error);
-            initSession(data.user);
+            if(data.error) return showAuthErr(data.error);
+            loginComplete(data.user);
         }
 
-        async function handleLogin() {
-            const identifier = document.getElementById('log-id').value.trim();
-            const password = document.getElementById('log-pass').value.trim();
+        async function authLogin() {
+            const identifier = document.getElementById('in-log-id').value.trim();
+            const password = document.getElementById('in-log-pass').value.trim();
 
             const res = await fetch('/api/login', {
                 method: 'POST',
@@ -302,65 +348,138 @@
                 body: JSON.stringify({ identifier, password })
             });
             const data = await res.json();
-            if(data.error) return showErr(data.error);
-            initSession(data.user);
+            if(data.error) return showAuthErr(data.error);
+            loginComplete(data.user);
         }
 
-        function showErr(msg) {
-            const el = document.getElementById('auth-err');
-            el.innerText = msg;
-            el.classList.remove('hidden');
-        }
-
-        // --- SESSION LOGIC ---
-        function initSession(user) {
-            USER = user;
-            localStorage.setItem('nyatter_session', JSON.stringify(user));
-            document.getElementById('auth-ui').classList.add('hidden');
-            document.getElementById('app-ui').classList.remove('hidden');
+        function loginComplete(user) {
+            CURRENT_USER = user;
+            localStorage.setItem('nyatter_user', JSON.stringify(user));
             
-            // Set UI
-            document.getElementById('nav-user').innerText = "@" + user.username;
+            document.getElementById('auth-gate').classList.add('hidden');
+            document.getElementById('app-grid').classList.remove('hidden');
+            
+            // Sync UI
+            document.getElementById('nav-username-display').innerText = "@" + user.username;
             document.getElementById('nav-pfp').src = user.pfp;
-            document.getElementById('comp-pfp').src = user.pfp;
-            if(user.username === DEV_NAME) document.getElementById('nav-dev').classList.remove('hidden');
-
-            startSync();
-        }
-
-        function startSync() {
-            refresh();
-            setInterval(() => { if(!IS_REPLYING) refresh(); }, 4000);
-        }
-
-        async function refresh() {
-            await fetchUsers(); // Cache PFPs
-            await fetchPosts();
-            await fetchNotifs();
-        }
-
-        // --- POSTING & COMMANDS ---
-        async function transmit() {
-            const text = document.getElementById('post-input').value.trim();
-            if(!text && !TEMP_PFP) return;
-
-            const res = await fetch('/api/posts', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ user: USER.username, text, img: TEMP_PFP })
-            });
-            const data = await res.json();
-
-            // Check for Silent Admin Commands
-            if(data.commandAction) {
-                alert("System Command Executed: " + data.commandAction);
-                if(data.commandAction === "WIPED_ALL") logout();
+            document.getElementById('composer-pfp').src = user.pfp;
+            
+            if(user.isDev) {
+                document.getElementById('nav-is-dev').classList.remove('hidden');
+                document.getElementById('nav-admin-btn').classList.remove('hidden');
             }
 
-            document.getElementById('post-input').value = "";
-            document.getElementById('post-preview').innerHTML = "";
-            TEMP_PFP = null;
-            refresh();
+            initApp();
+        }
+
+        function showAuthErr(m) {
+            const e = document.getElementById('auth-error');
+            e.innerText = m; e.classList.remove('hidden');
+        }
+
+        // --- APP ENGINE ---
+        function initApp() {
+            refreshGrid();
+            setInterval(() => { if(!IS_INPUT_ACTIVE) refreshGrid(); }, 4000);
+        }
+
+        async function refreshGrid() {
+            await fetchUsers(); 
+            await fetchPosts();
+            await fetchNotifications();
+        }
+
+        async function fetchUsers() {
+            const res = await fetch('/api/users');
+            const users = await res.json();
+            USER_PFP_CACHE = {};
+            users.forEach(u => USER_PFP_CACHE[u.username] = u.pfp);
+
+            document.getElementById('sidebar-user-list').innerHTML = users.map(u => `
+                <div class="flex items-center gap-4 group cursor-default">
+                    <img src="${u.pfp}" class="w-10 h-10 rounded-2xl object-cover border border-white/5 group-hover:border-indigo-500/50 transition-all">
+                    <div class="flex-1 overflow-hidden">
+                        <p class="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors">@${u.username}</p>
+                        <p class="text-[9px] text-slate-500 font-black uppercase tracking-widest">Active Link</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function fetchPosts() {
+            const res = await fetch('/api/posts');
+            const posts = await res.json();
+            const container = document.getElementById('post-stream-container');
+
+            container.innerHTML = posts.map(p => {
+                const isOwner = CURRENT_USER.username === p.user;
+                const isAdmin = CURRENT_USER.isDev;
+                
+                return `
+                <div class="p-8 post-card ${p.pinned ? 'bg-indigo-500/[0.04] border-l-4 border-l-amber-400' : ''}">
+                    <div class="flex gap-6">
+                        <img src="${p.userPfp || USER_PFP_CACHE[p.user]}" class="pfp-main">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center mb-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-black text-white text-base">@${p.user}</span>
+                                    ${p.user === "HaydenDev" ? '<span class="badge-dev">Core Admin</span>' : ''}
+                                    ${p.pinned ? '<span class="text-[10px] text-amber-500 font-black tracking-widest">📌 PINNED</span>' : ''}
+                                </div>
+                                <div class="flex gap-4 opacity-40 hover:opacity-100 transition-opacity">
+                                    ${isAdmin ? `<button onclick="adminTogglePin('${p._id}')" class="text-[9px] font-black hover:text-amber-500 uppercase">Pin</button>` : ''}
+                                    ${(isOwner || isAdmin) ? `<button onclick="adminDeletePost('${p._id}')" class="text-[9px] font-black hover:text-red-500 uppercase">Delete</button>` : ''}
+                                </div>
+                            </div>
+                            <p class="text-[15px] text-slate-200 leading-relaxed font-light mt-2">${parseText(p.text)}</p>
+                            ${p.img ? `<img src="${p.img}" class="w-full mt-4 rounded-3xl border border-white/5 shadow-2xl">` : ''}
+
+                            <div class="flex gap-8 mt-5 pb-4 border-b border-white/5">
+                                <button onclick="likePost('${p._id}')" class="flex items-center gap-2 text-xs font-bold ${p.likes.includes(CURRENT_USER.username) ? 'text-pink-500' : 'text-slate-500 hover:text-pink-400'}">
+                                    ❤️ ${p.likes.length}
+                                </button>
+                                <div class="text-xs font-bold text-slate-600">💬 ${p.replies.length}</div>
+                            </div>
+
+                            <div class="mt-6 space-y-5">
+                                ${p.replies.map(r => `
+                                    <div class="flex gap-4 group">
+                                        <img src="${r.userPfp || USER_PFP_CACHE[r.user]}" class="pfp-reply border border-white/10">
+                                        <div class="flex-1">
+                                            <p class="text-xs text-slate-400">
+                                                <span class="font-bold text-indigo-400">@${r.user}</span> 
+                                                <span class="font-light">${parseText(r.text)}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                                <div class="flex gap-3 pt-2">
+                                    <input id="reply-in-${p._id}" 
+                                        onfocus="IS_INPUT_ACTIVE=true" onblur="setTimeout(()=>IS_INPUT_ACTIVE=false, 200)"
+                                        placeholder="Transmit a response..." 
+                                        class="flex-1 bg-black/30 border border-white/5 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-indigo-500 transition-all">
+                                    <button onclick="sendReply('${p._id}')" class="text-indigo-400 font-black text-[10px] uppercase tracking-tighter hover:text-white">Reply</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        async function appPost() {
+            const text = document.getElementById('post-text-in').value.trim();
+            if(!text && !ACTIVE_POST_IMG) return;
+
+            await fetch('/api/posts', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ user: CURRENT_USER.username, text, img: ACTIVE_POST_IMG })
+            });
+
+            document.getElementById('post-text-in').value = "";
+            clearPostImg();
+            refreshGrid();
         }
 
         async function sendReply(postId) {
@@ -371,142 +490,124 @@
             await fetch('/api/posts/reply', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: postId, user: USER.username, text })
+                body: JSON.stringify({ id: postId, user: CURRENT_USER.username, text })
             });
-            IS_REPLYING = false;
-            refresh();
+            input.value = "";
+            refreshGrid();
         }
 
-        // --- PROFILE SETTINGS ---
+        async function likePost(id) {
+            await fetch('/api/posts/like', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id, user: CURRENT_USER.username })
+            });
+            refreshGrid();
+        }
+
+        // --- ADMIN PANEL ACTIONS ---
+        function openAdmin() { document.getElementById('modal-admin').classList.add('active'); }
+
+        async function adminWipeAll() {
+            if(!confirm("⚠️ NUCLEAR WARNING: This will permanently erase ALL users, posts, and data. Proceed?")) return;
+            const res = await fetch('/api/admin/action', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ adminUser: CURRENT_USER.username, action: 'WIPE_ALL' })
+            });
+            const data = await res.json();
+            if(data.success) { alert("System Reset Complete."); appLogout(); }
+        }
+
+        async function adminDeleteUser() {
+            const target = document.getElementById('admin-target-user').value.trim();
+            if(!target) return;
+            const res = await fetch('/api/admin/action', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ adminUser: CURRENT_USER.username, action: 'DELETE_USER', targetId: target })
+            });
+            const data = await res.json();
+            alert(data.message || "Action processed.");
+            document.getElementById('admin-target-user').value = "";
+            refreshGrid();
+        }
+
+        async function adminDeletePost(id) {
+            if(!confirm("Erase post?")) return;
+            await fetch('/api/admin/action', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ adminUser: CURRENT_USER.username, action: 'DELETE_POST', targetId: id })
+            });
+            refreshGrid();
+        }
+
+        async function adminTogglePin(id) {
+            await fetch('/api/admin/action', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ adminUser: CURRENT_USER.username, action: 'TOGGLE_PIN', targetId: id })
+            });
+            refreshGrid();
+        }
+
+        // --- USER SETTINGS ---
         function openSettings() {
-            document.getElementById('edit-preview').src = USER.pfp;
-            document.getElementById('edit-user').value = USER.username;
+            document.getElementById('settings-pfp-preview').src = CURRENT_USER.pfp;
+            document.getElementById('set-username').value = CURRENT_USER.username;
             document.getElementById('modal-settings').classList.add('active');
         }
 
-        async function saveSettings() {
-            const newUsername = document.getElementById('edit-user').value.trim();
-            const newPassword = document.getElementById('edit-pass').value.trim();
-            const newPfp = document.getElementById('edit-preview').src;
+        async function updateProfile() {
+            const newUsername = document.getElementById('set-username').value.trim();
+            const newPassword = document.getElementById('set-password').value.trim();
+            const newPfp = document.getElementById('settings-pfp-preview').src;
 
             const res = await fetch('/api/user/update', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                    oldUsername: USER.username, 
-                    newUsername, 
-                    newPassword, 
-                    newPfp 
-                })
+                body: JSON.stringify({ oldUsername: CURRENT_USER.username, newUsername, newPassword, newPfp })
             });
             const data = await res.json();
             if(data.success) {
-                localStorage.setItem('nyatter_session', JSON.stringify(data.user));
+                localStorage.setItem('nyatter_user', JSON.stringify(data.user));
                 location.reload();
-            } else {
-                alert(data.error);
-            }
+            } else { alert(data.error); }
         }
 
-        // --- DATA FETCHING ---
-        async function fetchUsers() {
-            const res = await fetch('/api/users');
-            const users = await res.json();
-            USER_DATA = {};
-            users.forEach(u => USER_DATA[u.username] = u.pfp);
+        // --- NOTIFICATIONS ---
+        function openNotifs() { document.getElementById('modal-notifs').classList.add('active'); }
 
-            document.getElementById('user-list').innerHTML = users.map(u => `
-                <div class="flex items-center gap-3 group">
-                    <img src="${u.pfp}" class="w-8 h-8 rounded-lg object-cover border border-white/10 group-hover:border-indigo-500">
-                    <span class="text-xs font-bold text-slate-400 group-hover:text-white transition-colors">@${u.username}</span>
-                </div>
-            `).join('');
-        }
-
-        async function fetchPosts() {
-            const res = await fetch('/api/posts');
-            const posts = await res.json();
-            const list = document.getElementById('feed-list');
-
-            list.innerHTML = posts.map(p => {
-                const pfp = USER_DATA[p.user] || 'https://via.placeholder.com/150';
-                return `
-                <div class="p-8 post-card ${p.pinned ? 'bg-indigo-500/[0.03] border-l-2 border-l-amber-400' : ''}">
-                    <div class="flex gap-6">
-                        <img src="${pfp}" class="pfp-feed shadow-lg shrink-0">
-                        <div class="flex-1 min-w-0">
-                            <div class="flex justify-between items-center mb-1">
-                                <div class="flex items-center gap-2">
-                                    <span class="font-extrabold text-white">@${p.user}</span>
-                                    ${p.user === DEV_NAME ? '<span class="dev-badge">Admin</span>' : ''}
-                                    ${p.pinned ? '<span class="text-[10px] text-amber-400 font-black tracking-widest uppercase">Pinned</span>' : ''}
-                                </div>
-                                <div class="flex gap-4">
-                                    ${(USER.username === DEV_NAME || USER.username === p.user) ? `
-                                        <button onclick="deletePost('${p._id}')" class="text-[9px] font-black text-slate-600 hover:text-red-500 uppercase tracking-widest">Delete</button>
-                                    ` : ''}
-                                </div>
-                            </div>
-                            <p class="text-[15px] text-slate-300 leading-relaxed font-medium whitespace-pre-wrap">${parse(p.text)}</p>
-                            ${p.img ? `<img src="${p.img}" class="w-full mt-4 rounded-3xl border border-white/10 shadow-2xl">` : ''}
-                            
-                            <div class="mt-6 space-y-4 pl-4 border-l border-white/5">
-                                ${p.replies.map(r => `
-                                    <div class="flex gap-3 text-sm">
-                                        <img src="${USER_DATA[r.user] || ''}" class="w-6 h-6 rounded-md">
-                                        <p class="text-slate-400"><span class="text-indigo-400 font-bold">@${r.user}</span> ${parse(r.text)}</p>
-                                    </div>
-                                `).join('')}
-                                <div class="flex gap-3 pt-2">
-                                    <input id="reply-in-${p._id}" 
-                                        onfocus="IS_REPLYING=true" onblur="setTimeout(()=>IS_REPLYING=false, 200)"
-                                        placeholder="Type a response..." 
-                                        class="flex-1 bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs outline-none focus:border-indigo-500">
-                                    <button onclick="sendReply('${p._id}')" class="text-indigo-400 font-black text-[10px] uppercase">Reply</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `}).join('');
-        }
-
-        async function fetchNotifs() {
-            const res = await fetch(`/api/notifications/${USER.username}`);
+        async function fetchNotifications() {
+            const res = await fetch(`/api/notifications/${CURRENT_USER.username}`);
             const data = await res.json();
             document.getElementById('notif-dot').style.display = data.length > 0 ? 'block' : 'none';
-            document.getElementById('notif-list').innerHTML = data.map(n => `
-                <div class="p-4 bg-white/5 rounded-2xl flex justify-between items-center border border-white/5">
-                    <p class="text-sm"><b>@${n.fromUser}</b> tagged you</p>
-                    <button onclick="clearNotif('${n._id}')" class="text-red-400 font-bold">✕</button>
+            document.getElementById('notif-stream').innerHTML = data.map(n => `
+                <div class="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl flex justify-between items-center group">
+                    <p class="text-xs text-slate-300"><b>@${n.fromUser}</b> tagged you in a signal.</p>
+                    <button onclick="clearNotif('${n._id}')" class="w-7 h-7 flex items-center justify-center bg-white/5 hover:bg-red-500/20 rounded-full transition-colors">✕</button>
                 </div>
-            `).join('') || '<p class="text-center text-slate-600 py-10">No signals detected.</p>';
+            `).join('') || '<div class="text-center py-10 opacity-20 text-4xl">📭</div>';
+        }
+
+        async function clearNotif(id) {
+            await fetch('/api/notifications/clear', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id}) });
+            fetchNotifications();
         }
 
         // --- UTILS ---
-        function parse(text) {
-            return text.replace(/@(\w+)/g, (match, name) => {
-                return `<span class="${name === USER.username ? 'my-tag' : 'other-tag'}">${match}</span>`;
+        function parseText(t) {
+            return t.replace(/@(\w+)/g, (match, name) => {
+                return `<span class="${name === CURRENT_USER.username ? 'tag-me' : 'tag-user'}">${match}</span>`;
             });
         }
-        function openNotifs() { document.getElementById('modal-notif').classList.add('active'); }
-        function closeModals() { 
-            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); 
-        }
-        function logout() { localStorage.clear(); location.reload(); }
-        async function clearNotif(id) {
-            await fetch('/api/notifications/clear', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id}) });
-            refresh();
-        }
-        async function deletePost(id) {
-            if(!confirm("Erase from history?")) return;
-            await fetch('/api/posts/delete', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, user: USER.username}) });
-            refresh();
-        }
+        function closeAllModals() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
+        function appLogout() { localStorage.clear(); location.reload(); }
 
         window.onload = () => {
-            const session = localStorage.getItem('nyatter_session');
-            if(session) initSession(JSON.parse(session));
+            const saved = localStorage.getItem('nyatter_user');
+            if(saved) loginComplete(JSON.parse(saved));
         };
     </script>
 </body>
