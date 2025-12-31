@@ -1,93 +1,72 @@
 const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
 const mongoose = require('mongoose');
-
+const cors = require('cors');
+const path = require('path');
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
 
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/connect_app')
-    .then(() => console.log('✅ MongoDB Connected'))
-    .catch(err => console.error('❌ DB Error:', err));
-
-const UserSchema = new mongoose.Schema({
-    email: { type: String, unique: true, required: true, lowercase: true },
-    password: { type: String, required: true },
-    firstName: String,
-    lastName: String,
-    pfp: { type: String, default: 'default.png' } // Restored PFP field
-});
-
-const MessageSchema = new mongoose.Schema({
-    user: String, text: String, email: String, pfp: String, timestamp: { type: Date, default: Date.now }
-});
-
-const User = mongoose.model('User', UserSchema);
-const Message = mongoose.model('Message', MessageSchema);
-
+app.use(express.json({ limit: '50mb' })); // Increased limit for image uploads
+app.use(cors());
 app.use(express.static('public'));
-app.use(express.json());
 
-// --- AUTH & SETTINGS ---
-app.post('/auth', async (req, res) => {
-    const { email, password, firstName, lastName, type } = req.body;
-    try {
-        const cleanEmail = email.toLowerCase().trim();
-        if (type === 'signup') {
-            const exists = await User.findOne({ email: cleanEmail });
-            if (exists) return res.json({ success: false, message: "Email already exists." });
-            const user = await User.create({ email: cleanEmail, password, firstName, lastName });
-            return res.json({ success: true, user });
-        }
-        const user = await User.findOne({ email: cleanEmail, password });
-        if (user) return res.json({ success: true, user });
-        res.json({ success: false, message: "Invalid credentials." });
-    } catch (e) { res.json({ success: false, message: "Server Error" }); }
+// 1. DATABASE CONNECTION
+// REPLACE THIS STRING with your real MongoDB connection string!
+const MONGO_URI = "your_mongodb_connection_string_here"; 
+
+mongoose.connect(MONGO_URI)
+    .then(() => console.log("Connected to MongoDB Global"))
+    .catch(err => console.log("DB Error:", err));
+
+// 2. THE POST MODEL
+const PostSchema = new mongoose.Schema({
+    user: String,
+    text: String,
+    img: String,
+    likes: { type: Array, default: [] },
+    replies: { type: Array, default: [] },
+    pinned: { type: Boolean, default: false },
+    timestamp: { type: Number, default: Date.now }
+});
+const Post = mongoose.model('Post', PostSchema);
+
+// 3. API ROUTES
+app.get('/api/posts', async (req, res) => {
+    const posts = await Post.find().sort({ pinned: -1, timestamp: -1 });
+    res.json(posts);
 });
 
-// Update Profile Route
-app.post('/update-settings', async (req, res) => {
-    const { email, firstName, lastName } = req.body;
-    try {
-        const user = await User.findOneAndUpdate(
-            { email: email.toLowerCase() },
-            { firstName, lastName },
-            { new: true }
-        );
-        res.json({ success: true, user });
-    } catch (e) { res.json({ success: false }); }
+app.post('/api/posts', async (req, res) => {
+    const newPost = new Post(req.body);
+    await newPost.save();
+    res.json(newPost);
 });
 
-let onlineUsers = {};
-io.on('connection', async (socket) => {
-    const history = await Message.find().sort({ _id: -1 }).limit(50);
-    socket.emit('load-history', history.reverse());
-
-    socket.on('join-chat', (user) => {
-        socket.user = user;
-        onlineUsers[socket.id] = user;
-        io.emit('update-users', Object.values(onlineUsers));
-    });
-
-    socket.on('chat-msg', async (text) => {
-        if (!socket.user) return;
-        const msg = await Message.create({
-            user: `${socket.user.firstName} ${socket.user.lastName}`,
-            text, email: socket.user.email, pfp: socket.user.pfp || 'default.png'
-        });
-        io.emit('chat-msg', msg);
-    });
-
-    socket.on('request-clear-all', async () => {
-        await Message.deleteMany({});
-        io.emit('chat-cleared-globally');
-    });
-
-    socket.on('disconnect', () => {
-        delete onlineUsers[socket.id];
-        io.emit('update-users', Object.values(onlineUsers));
-    });
+app.post('/api/posts/like', async (req, res) => {
+    const { id, user } = req.body;
+    const post = await Post.findById(id);
+    if (post.likes.includes(user)) {
+        post.likes = post.likes.filter(u => u !== user);
+    } else {
+        post.likes.push(user);
+    }
+    await post.save();
+    res.json(post);
 });
 
-server.listen(process.env.PORT || 3000);
+app.post('/api/posts/reply', async (req, res) => {
+    const { id, user, text } = req.body;
+    const post = await Post.findById(id);
+    post.replies.push({ user, text });
+    await post.save();
+    res.json(post);
+});
+
+// Admin routes for HaydenDev
+app.post('/api/posts/delete', async (req, res) => {
+    if(req.body.admin === "HaydenDev") {
+        await Post.findByIdAndDelete(req.body.id);
+        res.json({ success: true });
+    }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Nyatter Server running on ${PORT}`));
