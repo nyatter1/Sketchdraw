@@ -31,7 +31,6 @@
 
         .font-game { font-family: 'Fredoka One', cursive; }
 
-        /* Animations */
         @keyframes float {
             0%, 100% { transform: translateY(0px) rotate(0deg); }
             50% { transform: translateY(-10px) rotate(1deg); }
@@ -44,7 +43,6 @@
         }
         .pop-in { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
-        /* UI Styles */
         .neo-button {
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
@@ -96,7 +94,7 @@
             cursor: crosshair;
         }
 
-        canvas { display: block; touch-action: none; }
+        canvas { display: block; touch-action: none; width: 100%; height: 100%; }
 
         .overlay-full {
             position: absolute;
@@ -105,7 +103,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(15, 23, 42, 0.85);
+            background: rgba(15, 23, 42, 0.9);
             backdrop-filter: blur(8px);
         }
 
@@ -114,152 +112,115 @@
             height: 32px;
             border-radius: 10px;
             cursor: pointer;
-            border: 3px solid white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
+            border: 2px solid #ddd;
+            transition: transform 0.1s;
         }
-        .color-swatch.active { transform: scale(1.2); outline: 2px solid var(--primary); }
+        .color-swatch.active { transform: scale(1.2); border: 2px solid black; }
 
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #CBD5E0; border-radius: 10px; }
+        .chat-disabled {
+            background-color: #f1f5f9 !important;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
     </style>
 </head>
 <body>
 
-    <!-- MAIN MENU SCREEN -->
+    <!-- MENU SCREEN -->
     <div id="screen-menu" class="w-full max-w-6xl px-6 flex flex-col md:flex-row gap-12 items-center z-10 pop-in">
         <div class="flex flex-col items-center gap-6 w-full md:w-1/2">
-            <div class="relative group">
+            <div class="relative">
                 <div class="avatar-container animate-float" id="avatar-preview">
-                    <span id="display-emoji" class="text-7xl">🐱</span>
+                    <span id="display-emoji" class="text-7xl">🐶</span>
                     <img id="display-upload" class="avatar-img hidden" src="">
                     <div id="display-accessory" class="accessory-overlay">👑</div>
                 </div>
-                <label class="absolute bottom-2 right-2 bg-white p-3 rounded-2xl shadow-lg cursor-pointer hover:bg-slate-50 border border-slate-200">
+                <label class="absolute bottom-2 right-2 bg-white p-3 rounded-2xl shadow-lg cursor-pointer">
                     <input type="file" id="pfp-upload" class="hidden" accept="image/*">
                     📸
                 </label>
             </div>
-
-            <div class="bg-white p-6 rounded-[40px] shadow-xl w-full space-y-4">
+            <div class="bg-white p-6 rounded-[40px] shadow-xl w-full">
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="space-y-2">
-                        <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Character</p>
-                        <div class="grid grid-cols-4 gap-2" id="base-options">
-                            <!-- Injected by JS -->
-                        </div>
-                    </div>
-                    <div class="space-y-2">
-                        <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Accessory</p>
-                        <div class="grid grid-cols-4 gap-2" id="acc-options">
-                            <!-- Injected by JS -->
-                        </div>
-                    </div>
+                    <div id="base-options" class="grid grid-cols-4 gap-2"></div>
+                    <div id="acc-options" class="grid grid-cols-4 gap-2"></div>
                 </div>
             </div>
         </div>
-
         <div class="w-full md:w-1/2 flex flex-col gap-8">
-            <div>
-                <h1 class="text-8xl font-game text-slate-800 tracking-tighter leading-none mb-4">
-                    Sketch<span class="text-indigo-600">Dash</span><span class="text-2xl ml-2 text-pink-500">PRO</span>
-                </h1>
-                <p class="text-slate-500 text-lg font-bold">Real-time Multiplayer Battle Arena</p>
-            </div>
-
+            <h1 class="text-8xl font-game text-slate-800 tracking-tighter">Sketch<span class="text-indigo-600">Dash</span></h1>
             <div class="bg-white p-8 rounded-[50px] shadow-2xl space-y-6">
-                <div class="space-y-2">
-                    <label class="text-xs font-black uppercase text-slate-400 ml-2">Display Name</label>
-                    <input type="text" id="username" value="Artist77" class="w-full p-5 rounded-3xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold text-lg">
-                </div>
-                <button onclick="joinGame()" class="w-full py-6 rounded-[35px] neo-button neo-button-primary font-game text-3xl tracking-wider">
-                    ENTER ARENA
-                </button>
+                <input type="text" id="username" placeholder="Username" class="w-full p-5 rounded-3xl bg-slate-50 border-2 outline-none font-bold text-lg">
+                <button onclick="joinGame()" class="w-full py-6 rounded-[35px] neo-button neo-button-primary font-game text-3xl">PLAY NOW</button>
             </div>
         </div>
     </div>
 
-    <!-- GAMEPLAY SCREEN -->
-    <div id="screen-game" class="hidden w-full max-w-[1400px] h-[95vh] flex flex-col gap-4 px-4 overflow-hidden">
-        <!-- Header -->
+    <!-- GAME SCREEN -->
+    <div id="screen-game" class="hidden w-full max-w-[1400px] h-[95vh] flex flex-col gap-4 px-4">
         <div class="flex items-center justify-between bg-white p-4 rounded-[30px] shadow-xl shrink-0">
             <div class="flex items-center gap-6">
-                <div class="flex flex-col">
-                    <span class="bg-indigo-100 text-indigo-600 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-1">Live Arena</span>
-                    <div class="flex items-center gap-2">
-                        <span class="text-3xl">⏱️</span>
-                        <span id="timer" class="text-4xl font-game text-slate-800">60</span>
-                    </div>
+                <div class="text-center">
+                    <p class="text-[10px] font-black uppercase text-slate-400">Round</p>
+                    <p id="round-counter" class="font-game text-2xl">1/10</p>
                 </div>
-                <div class="h-12 w-px bg-slate-100"></div>
-                <div class="flex flex-col items-center">
-                    <p id="word-display" class="font-game text-3xl tracking-[0.5em] text-indigo-600">_ _ _ _ _</p>
-                    <p id="turn-status" class="text-[10px] font-bold text-slate-400 uppercase">Syncing game...</p>
+                <div class="text-center">
+                    <p class="text-[10px] font-black uppercase text-slate-400">Time</p>
+                    <p id="timer" class="font-game text-2xl text-pink-500">60</p>
+                </div>
+                <div class="flex flex-col items-center px-8">
+                    <p id="word-display" class="font-game text-3xl tracking-[0.4em] text-indigo-600">_ _ _ _</p>
+                    <p id="turn-status" class="text-[10px] font-bold text-slate-400 uppercase">Waiting...</p>
                 </div>
             </div>
-            <button onclick="location.reload()" class="px-6 py-3 rounded-2xl bg-slate-50 text-slate-400 font-bold text-xs hover:text-red-500">LEAVE</button>
         </div>
 
-        <!-- Body -->
         <div class="flex-1 flex gap-4 min-h-0">
-            <!-- Players -->
-            <div class="w-56 bg-white rounded-[40px] shadow-xl p-6 flex flex-col gap-4">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b pb-3">Competitors</p>
-                <div id="player-list" class="flex-1 overflow-y-auto space-y-4"></div>
-            </div>
+            <!-- Sidebar -->
+            <div class="w-64 bg-white rounded-[40px] shadow-xl p-6 flex flex-col gap-4 overflow-y-auto" id="player-list"></div>
 
-            <!-- Canvas -->
+            <!-- Canvas Area -->
             <div id="canvas-wrapper">
                 <canvas id="game-canvas"></canvas>
                 
-                <div id="artist-controls" class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white shadow-2xl p-4 rounded-[35px] flex items-center gap-6 border border-slate-100 hidden">
-                    <div class="flex items-center gap-2" id="color-palette"></div>
-                    <div class="h-8 w-px bg-slate-200"></div>
-                    <button onclick="clearCanvas()" class="p-3 bg-red-50 text-red-500 font-bold rounded-2xl hover:bg-red-100">CLEAR</button>
+                <div id="artist-controls" class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white shadow-2xl p-4 rounded-[35px] flex items-center gap-4 hidden">
+                    <div id="color-palette" class="grid grid-cols-9 gap-2"></div>
+                    <button onclick="clearCanvas()" class="px-4 py-2 bg-red-50 text-red-500 font-bold rounded-xl text-sm">CLEAR</button>
                 </div>
 
-                <!-- Overlays -->
-                <div id="overlay-waiting" class="overlay-full hidden">
-                    <div class="text-center text-white space-y-4">
-                        <div class="text-7xl animate-bounce">⏳</div>
-                        <h2 class="font-game text-5xl">NEED MORE ARTISTS</h2>
-                        <p class="font-bold text-slate-400">Game starts automatically when 2+ players are connected.</p>
+                <!-- Selection Overlay -->
+                <div id="overlay-selection" class="overlay-full hidden">
+                    <div class="text-center text-white space-y-8">
+                        <h2 class="font-game text-4xl">PICK A WORD TO DRAW</h2>
+                        <div id="word-choices" class="flex gap-4 justify-center"></div>
                     </div>
                 </div>
 
-                <div id="overlay-intermission" class="overlay-full hidden">
-                    <div class="bg-white p-12 rounded-[60px] shadow-2xl text-center space-y-6 max-w-md w-full pop-in">
-                        <p class="text-xs font-black uppercase text-slate-400 tracking-widest">Round Over!</p>
-                        <div class="space-y-1">
-                            <p class="text-slate-500 font-bold">The word was</p>
-                            <h2 id="result-word" class="font-game text-5xl text-indigo-600 uppercase">...</h2>
-                        </div>
-                        <p class="text-indigo-400 font-game text-2xl animate-pulse">Next Round Soon</p>
-                    </div>
+                <!-- Intermission/Waiting Overlays -->
+                <div id="overlay-waiting" class="overlay-full hidden"><h2 class="font-game text-white text-4xl">WAITING FOR PLAYERS...</h2></div>
+                <div id="overlay-intermission" class="overlay-full hidden text-white text-center">
+                    <p class="text-xl">The word was</p>
+                    <h2 id="result-word" class="font-game text-6xl text-yellow-400">...</h2>
                 </div>
             </div>
 
-            <!-- Chat -->
+            <!-- Chat Area -->
             <div class="w-80 bg-white rounded-[40px] shadow-xl flex flex-col overflow-hidden">
-                <div id="chat-feed" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
-                <div class="p-4 border-t border-slate-100">
-                    <input type="text" id="guess-input" placeholder="Type your guess..." class="w-full p-4 rounded-2xl bg-slate-50 outline-none font-bold text-sm">
+                <div id="chat-feed" class="flex-1 overflow-y-auto p-4 space-y-2 text-sm"></div>
+                <div class="p-4 border-t">
+                    <input type="text" id="guess-input" placeholder="Type your guess..." class="w-full p-4 rounded-2xl bg-slate-50 outline-none font-bold">
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- GLOBAL SOCKET VARIABLE ---
         let socket;
-        
-        // --- CLIENT STATE ---
         const state = {
-            user: { name: 'Artist', base: '🐱', accessory: '👑', pfp: null },
+            user: { name: 'Artist', base: '🐶', accessory: '👑', pfp: null },
             gameState: {},
-            players: [],
             isDrawing: false,
-            brush: { color: '#000000', size: 5 },
+            brush: { color: '#000000', size: 4 },
             lastPos: { x: 0, y: 0 }
         };
 
@@ -267,19 +228,19 @@
         const ctx = canvas.getContext('2d');
         const wrapper = document.getElementById('canvas-wrapper');
 
-        // --- INIT UI ---
-        const bases = ['🐱','🐶','🦊','🐻','🐼','🐸','🐵','🤖'];
-        const accs = ['👑','🎩','🕶️','🎀','🔥','🍀','⭐',''];
-        const colors = ['#000000', '#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
+        const colors = [
+            '#000000', '#555555', '#aaaaaa', '#ffffff', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3',
+            '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800'
+        ];
 
         function setupUI() {
             const bCont = document.getElementById('base-options');
             const aCont = document.getElementById('acc-options');
             const cCont = document.getElementById('color-palette');
 
-            bases.forEach(b => {
+            ['🐱','🐶','🦊','🐻','🐼','🐸','🐵','🤖'].forEach(b => {
                 const btn = document.createElement('button');
-                btn.className = "p-2 bg-slate-50 rounded-xl text-xl hover:bg-indigo-50";
+                btn.className = "p-2 bg-slate-50 rounded-lg text-xl";
                 btn.innerText = b;
                 btn.onclick = () => { 
                     state.user.base = b; 
@@ -291,9 +252,9 @@
                 bCont.appendChild(btn);
             });
 
-            accs.forEach(a => {
+            ['👑','🎩','🕶️','🎀','🔥','🍀','⭐',''].forEach(a => {
                 const btn = document.createElement('button');
-                btn.className = "p-2 bg-slate-50 rounded-xl text-xl hover:bg-indigo-50";
+                btn.className = "p-2 bg-slate-50 rounded-lg text-xl";
                 btn.innerText = a || '❌';
                 btn.onclick = () => { 
                     state.user.accessory = a; 
@@ -311,46 +272,63 @@
                     document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
                     div.classList.add('active');
                 };
-                if (c === '#000000') div.classList.add('active');
                 cCont.appendChild(div);
             });
+
+            document.getElementById('pfp-upload').onchange = (e) => {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    state.user.pfp = ev.target.result;
+                    document.getElementById('display-upload').src = ev.target.result;
+                    document.getElementById('display-upload').classList.remove('hidden');
+                    document.getElementById('display-emoji').classList.add('hidden');
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            };
         }
 
-        document.getElementById('pfp-upload').onchange = (e) => {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                state.user.pfp = ev.target.result;
-                document.getElementById('display-upload').src = ev.target.result;
-                document.getElementById('display-upload').classList.remove('hidden');
-                document.getElementById('display-emoji').classList.add('hidden');
-            };
-            reader.readAsDataURL(file);
-        };
-
         function joinGame() {
-            // Check if io is defined (library loaded)
-            if (typeof io === 'undefined') {
-                console.error("Socket.io is not defined. Make sure the script is loaded.");
-                return;
-            }
-
             socket = io();
-            setupSocketListeners();
-
             state.user.name = document.getElementById('username').value || "Artist";
             socket.emit('join_game', state.user);
             document.getElementById('screen-menu').classList.add('hidden');
             document.getElementById('screen-game').classList.remove('hidden');
             resizeCanvas();
+            initSocketEvents();
+            initDrawingEvents();
         }
 
-        // --- CANVAS LOGIC ---
         function resizeCanvas() {
             canvas.width = wrapper.clientWidth;
             canvas.height = wrapper.clientHeight;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
+        }
+
+        function initDrawingEvents() {
+            const start = (e) => {
+                if (state.gameState.drawerId !== socket.id || state.gameState.status !== 'active') return;
+                state.isDrawing = true;
+                state.lastPos = getPos(e);
+            };
+            const move = (e) => {
+                if (!state.isDrawing) return;
+                const pos = getPos(e);
+                const stroke = { from: state.lastPos, to: pos, color: state.brush.color, size: state.brush.size };
+                drawStroke(stroke);
+                socket.emit('draw_stroke', stroke);
+                state.lastPos = pos;
+                e.preventDefault();
+            };
+            const stop = () => state.isDrawing = false;
+
+            canvas.addEventListener('mousedown', start);
+            window.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', stop);
+            
+            canvas.addEventListener('touchstart', start);
+            canvas.addEventListener('touchmove', move, { passive: false });
+            window.addEventListener('touchend', stop);
         }
 
         function getPos(e) {
@@ -359,24 +337,6 @@
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             return { x: clientX - rect.left, y: clientY - rect.top };
         }
-
-        canvas.onmousedown = (e) => {
-            if (!socket || state.gameState.drawerId !== socket.id || state.gameState.status !== 'active') return;
-            state.isDrawing = true;
-            state.lastPos = getPos(e);
-        };
-
-        window.onmousemove = (e) => {
-            if (!state.isDrawing) return;
-            const pos = getPos(e);
-            const stroke = { from: state.lastPos, to: pos, color: state.brush.color, size: state.brush.size };
-            
-            drawStroke(stroke);
-            socket.emit('draw_stroke', stroke);
-            state.lastPos = pos;
-        };
-
-        window.onmouseup = () => state.isDrawing = false;
 
         function drawStroke(s) {
             ctx.strokeStyle = s.color;
@@ -387,43 +347,59 @@
             ctx.stroke();
         }
 
-        function clearCanvas() {
-            if (socket) socket.emit('clear_canvas');
-        }
+        function clearCanvas() { socket.emit('clear_canvas'); }
 
-        // --- SOCKET LISTENERS ---
-        function setupSocketListeners() {
+        function initSocketEvents() {
             socket.on('player_list_update', (list) => {
-                state.players = list;
                 const cont = document.getElementById('player-list');
-                cont.innerHTML = list.map(p => `
-                    <div class="flex items-center gap-3 p-3 rounded-[25px] ${p.id === state.gameState.drawerId ? 'bg-indigo-50 ring-2 ring-indigo-200' : 'bg-slate-50'}">
-                        <div class="relative w-10 h-10 shrink-0">
-                            <div class="w-full h-full rounded-xl bg-white overflow-hidden flex items-center justify-center border-2 border-white shadow-sm">
-                                ${p.pfp ? `<img src="${p.pfp}" class="avatar-img">` : `<span class="text-xl">${p.base}</span>`}
-                            </div>
-                            <span class="absolute -top-2 -right-2 text-lg">${p.accessory || ''}</span>
+                cont.innerHTML = list.sort((a,b) => b.score - a.score).map(p => `
+                    <div class="flex items-center gap-3 p-3 rounded-2xl ${p.id === state.gameState.drawerId ? 'bg-indigo-50 border-2 border-indigo-200' : 'bg-slate-50'}">
+                        <div class="w-10 h-10 rounded-lg bg-white overflow-hidden flex items-center justify-center text-xl shadow-sm">
+                            ${p.pfp ? `<img src="${p.pfp}" class="w-full h-full object-cover">` : p.base}
                         </div>
                         <div class="min-w-0">
-                            <p class="text-[10px] font-black truncate">${p.name} ${p.id === socket.id ? '(YOU)' : ''}</p>
-                            <p class="text-[8px] font-bold text-slate-400 uppercase">${p.score} PTS</p>
+                            <p class="text-xs font-black truncate">${p.name}</p>
+                            <p class="text-[10px] font-bold text-slate-400">${p.score} PTS</p>
                         </div>
                     </div>
                 `).join('');
-                
                 document.getElementById('overlay-waiting').classList.toggle('hidden', list.length >= 2);
             });
 
             socket.on('game_state_update', (gs) => {
                 state.gameState = gs;
-                const isArtist = gs.drawerId === socket.id;
+                const isDrawer = gs.drawerId === socket.id;
+                const hasGuessed = gs.winners.includes(socket.id);
+
+                document.getElementById('round-counter').innerText = `${gs.round}/10`;
+                document.getElementById('artist-controls').classList.toggle('hidden', !isDrawer || gs.status !== 'active');
                 
-                document.getElementById('artist-controls').classList.toggle('hidden', !isArtist);
-                document.getElementById('word-display').innerText = isArtist ? gs.currentWord : gs.currentWord.replace(/[A-Z]/g, '_ ');
-                
-                const artistName = state.players.find(p => p.id === gs.drawerId)?.name || 'Someone';
-                document.getElementById('turn-status').innerText = isArtist ? "YOUR TURN TO DRAW!" : `${artistName} is drawing...`;
-                
+                // Typing Rules
+                const input = document.getElementById('guess-input');
+                if (isDrawer) {
+                    input.disabled = true;
+                    input.placeholder = "You are drawing!";
+                    input.classList.add('chat-disabled');
+                } else if (hasGuessed) {
+                    input.disabled = true;
+                    input.placeholder = "Correct! Waiting for others...";
+                    input.classList.add('chat-disabled');
+                } else {
+                    input.disabled = false;
+                    input.placeholder = "Type your guess...";
+                    input.classList.remove('chat-disabled');
+                }
+
+                // UI states
+                document.getElementById('overlay-selection').classList.toggle('hidden', !isDrawer || gs.status !== 'selecting');
+                if (isDrawer && gs.status === 'selecting') {
+                    const choiceCont = document.getElementById('word-choices');
+                    choiceCont.innerHTML = gs.wordChoices.map(w => `
+                        <button onclick="socket.emit('word_selected', '${w}')" class="px-8 py-4 bg-indigo-600 rounded-2xl font-game text-xl hover:bg-indigo-500">${w}</button>
+                    `).join('');
+                }
+
+                document.getElementById('word-display').innerText = isDrawer || hasGuessed ? gs.currentWord : gs.currentWord.replace(/[A-Z]/g, '_ ');
                 document.getElementById('overlay-intermission').classList.toggle('hidden', gs.status !== 'intermission');
                 if (gs.status === 'intermission') {
                     document.getElementById('result-word').innerText = gs.currentWord;
@@ -431,27 +407,21 @@
                 }
             });
 
-            socket.on('timer_update', (t) => {
-                document.getElementById('timer').innerText = t;
-            });
-
+            socket.on('timer_update', (t) => { document.getElementById('timer').innerText = t; });
             socket.on('remote_draw', drawStroke);
             socket.on('remote_clear', () => ctx.clearRect(0, 0, canvas.width, canvas.height));
-
             socket.on('new_message', (msg) => {
                 const feed = document.getElementById('chat-feed');
                 const div = document.createElement('div');
-                div.className = `p-3 rounded-2xl text-xs font-bold pop-in ${msg.type === 'system' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-600'}`;
-                div.innerHTML = `<span class="opacity-40 uppercase text-[9px] block mb-1">${msg.user}</span>${msg.text}`;
+                div.innerHTML = `<span class="font-black uppercase text-[10px] text-slate-400">${msg.user}:</span> ${msg.text}`;
                 feed.appendChild(div);
                 feed.scrollTop = feed.scrollHeight;
             });
-
             socket.on('correct_guess', (data) => {
                 const feed = document.getElementById('chat-feed');
                 const div = document.createElement('div');
-                div.className = "p-3 rounded-2xl text-xs font-bold bg-green-50 text-green-600 pop-in";
-                div.innerHTML = `🌟 <strong>${data.playerName}</strong> guessed the word!`;
+                div.className = "text-green-600 font-bold italic";
+                div.innerText = `${data.playerName} guessed correctly!`;
                 feed.appendChild(div);
                 feed.scrollTop = feed.scrollHeight;
             });
@@ -460,7 +430,7 @@
         document.getElementById('guess-input').onkeypress = (e) => {
             if (e.key === 'Enter') {
                 const val = e.target.value.trim();
-                if (val && socket) socket.emit('send_message', val);
+                if (val) socket.emit('send_message', val);
                 e.target.value = '';
             }
         };
