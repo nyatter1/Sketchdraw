@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VikVok Live | Profile</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+
+        :root {
+            --bg-color: #050208;
+            --card-bg: #0f0a18;
+            --primary-violet: #8b5cf6;
+            --deep-purple: #4c1d95;
+            --text-white: #f5f3ff;
+            --text-gray: #a78bfa;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-white); height: 100vh; overflow: hidden; }
+
+        .nebula-bg {
+            position: absolute; width: 100%; height: 100%;
+            background: radial-gradient(circle at 20% 30%, #2e1065 0%, transparent 40%),
+                        radial-gradient(circle at 80% 70%, #4c1d95 0%, transparent 40%);
+            filter: blur(80px); z-index: -1;
+        }
+
+        /* --- DASHBOARD LAYOUT --- */
+        #dashboard { display: grid; height: 100vh; grid-template-columns: 280px 1fr 300px; }
+        
+        .sidebar { border-right: 1px solid rgba(255,255,255,0.05); padding: 30px; display: flex; flex-direction: column; background: rgba(15, 10, 24, 0.4); backdrop-filter: blur(20px); }
+        .nav-item { display: flex; align-items: center; gap: 15px; color: var(--text-gray); padding: 14px; border-radius: 15px; cursor: pointer; margin-bottom: 5px; font-weight: 600; text-decoration: none; transition: 0.3s; }
+        .nav-item:hover, .nav-item.active { background: var(--glass); color: var(--primary-violet); }
+
+        /* --- PROFILE AREA --- */
+        .profile-container { height: 100vh; overflow-y: auto; padding: 40px; scrollbar-width: none; }
+        .profile-container::-webkit-scrollbar { display: none; }
+
+        .profile-header {
+            display: flex; align-items: center; gap: 30px; margin-bottom: 50px;
+            background: var(--glass); padding: 40px; border-radius: 35px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .large-avatar {
+            width: 120px; height: 120px; background: linear-gradient(135deg, var(--primary-violet), var(--deep-purple));
+            border-radius: 30px; display: flex; align-items: center; justify-content: center;
+            font-size: 3rem; font-weight: 800; box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+        }
+
+        .stats-row { display: flex; gap: 40px; margin-top: 15px; }
+        .stat-item { text-align: left; }
+        .stat-value { font-size: 1.4rem; font-weight: 800; display: block; }
+        .stat-label { font-size: 0.8rem; color: var(--text-gray); text-transform: uppercase; letter-spacing: 1px; }
+
+        .bio { margin-top: 15px; opacity: 0.8; font-size: 0.95rem; max-width: 400px; line-height: 1.6; }
+
+        /* --- VIDEO GRID --- */
+        .tabs { display: flex; gap: 30px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 25px; }
+        .tab-item { padding: 15px 5px; cursor: pointer; font-weight: 700; color: var(--text-gray); border-bottom: 2px solid transparent; }
+        .tab-item.active { color: var(--primary-violet); border-color: var(--primary-violet); }
+
+        .video-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .grid-item {
+            aspect-ratio: 9/16; background: #000; border-radius: 20px;
+            overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer; transition: 0.3s;
+        }
+        .grid-item:hover { transform: translateY(-5px); border-color: var(--primary-violet); }
+        .grid-item video { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
+        
+        .view-count {
+            position: absolute; bottom: 10px; left: 10px; font-size: 0.8rem;
+            display: flex; align-items: center; gap: 5px; font-weight: 600; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 10px;
+        }
+
+        /* --- RIGHT PANEL --- */
+        .right-panel { padding: 30px; border-left: 1px solid rgba(255,255,255,0.05); }
+        .btn-follow {
+            width: 100%; padding: 14px; border-radius: 15px; border: none;
+            background: var(--text-white); color: var(--bg-color);
+            font-weight: 800; cursor: pointer; transition: 0.3s;
+        }
+        .btn-follow.following { background: var(--glass); color: white; border: 1px solid white; }
+    </style>
+</head>
+<body>
+    <div class="nebula-bg"></div>
+
+    <div id="dashboard">
+        <aside class="sidebar">
+            <h2 style="color:var(--primary-violet); margin-bottom: 30px;">VIKVOK</h2>
+            <nav>
+                <a href="index.html" class="nav-item"><i class="ri-home-7-line"></i> Home</a>
+                <div class="nav-item"><i class="ri-compass-3-line"></i> Explore</div>
+                <div class="nav-item"><i class="ri-chat-3-line"></i> Messages</div>
+                <div class="nav-item active"><i class="ri-user-3-fill"></i> Profile</div>
+            </nav>
+            <button onclick="logout()" class="nav-item" style="margin-top:auto; background:none; border:none; width: 100%;"><i class="ri-logout-box-line"></i> Logout</button>
+        </aside>
+
+        <main class="profile-container">
+            <div class="profile-header">
+                <div class="large-avatar" id="prof-init">?</div>
+                <div class="profile-info">
+                    <h1 id="prof-user" style="font-size: 2rem; font-weight: 800;">@username</h1>
+                    
+                    <div class="stats-row">
+                        <div class="stat-item">
+                            <span class="stat-value" id="count-followers">0</span>
+                            <span class="stat-label">Followers</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="count-following">0</span>
+                            <span class="stat-label">Following</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="count-likes">0</span>
+                            <span class="stat-label">Likes</span>
+                        </div>
+                    </div>
+
+                    <p class="bio" id="prof-bio">Loading profile flow...</p>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <div class="tab-item active">Videos</div>
+                <div class="tab-item">Liked</div>
+            </div>
+
+            <div class="video-grid" id="profile-videos">
+                </div>
+        </main>
+
+        <section class="right-panel">
+            <button class="btn-follow" id="follow-btn" onclick="handleFollow()">Follow</button>
+            <div style="margin-top: 30px; background: var(--glass); padding: 20px; border-radius: 20px;">
+                <h4 style="margin-bottom: 10px; font-size: 0.9rem;">Creator Insights</h4>
+                <p style="font-size: 0.8rem; opacity: 0.6;">All stats are live and updated via the VikVok server.</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // --- LIVE DATA FETCHING ---
+        async function loadProfile() {
+            // Get username from URL (e.g., profile.html?u=alex) or fallback to logged in user
+            const urlParams = new URLSearchParams(window.location.search);
+            let targetUser = urlParams.get('u');
+            const loggedInUser = localStorage.getItem('vikvok_u');
+
+            if (!targetUser) targetUser = loggedInUser;
+            if (!targetUser) return window.location.href = 'index.html';
+
+            // Hide follow button if it's your own profile
+            if (targetUser === loggedInUser) {
+                document.getElementById('follow-btn').style.display = 'none';
+            }
+
+            try {
+                const res = await fetch(`/api/profile/${targetUser}`);
+                const data = await res.json();
+
+                if (res.ok) {
+                    const { user, videos } = data;
+                    
+                    // Update UI
+                    document.getElementById('prof-user').innerText = `@${user.username.toLowerCase()}`;
+                    document.getElementById('prof-init').innerText = user.username.charAt(0).toUpperCase();
+                    document.getElementById('count-followers').innerText = user.followers;
+                    document.getElementById('count-following').innerText = user.following;
+                    document.getElementById('count-likes').innerText = user.totalLikes;
+                    document.getElementById('prof-bio').innerText = user.bio;
+
+                    // Inject Videos
+                    const grid = document.getElementById('profile-videos');
+                    grid.innerHTML = '';
+                    videos.forEach(v => {
+                        const item = document.createElement('div');
+                        item.className = 'grid-item';
+                        item.innerHTML = `
+                            <video src="${v.videoUrl}" muted onmouseover="this.play()" onmouseout="this.pause(); this.currentTime=0;"></video>
+                            <div class="view-count"><i class="ri-heart-fill"></i> ${v.likes}</div>
+                        `;
+                        grid.appendChild(item);
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to load profile", err);
+            }
+        }
+
+        function handleFollow() {
+            const btn = document.getElementById('follow-btn');
+            btn.classList.toggle('following');
+            btn.innerText = btn.classList.contains('following') ? 'Following' : 'Follow';
+            
+            // In a full live app, this would hit /api/follow
+            const count = document.getElementById('count-followers');
+            let current = parseInt(count.innerText);
+            count.innerText = btn.classList.contains('following') ? current + 1 : current - 1;
+        }
+
+        function logout() {
+            localStorage.removeItem('vikvok_u');
+            window.location.href = 'index.html';
+        }
+
+        window.onload = loadProfile;
+    </script>
+</body>
+</html>
