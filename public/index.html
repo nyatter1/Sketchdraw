@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SketchDash Pro | Multiplayer Battle</title>
+    <title>SketchDash Pro | Ultimate Multiplayer Battle</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <!-- Updated to a reliable CDN for Socket.io to prevent "io is not defined" error -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -13,14 +14,24 @@
             --primary-dark: #4752C4;
             --secondary: #FFD300;
             --accent: #FF477E;
+            --success: #22C55E;
             --bg: #F0F4F8;
+            --panel: #FFFFFF;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
 
         body {
             font-family: 'Quicksand', sans-serif;
             background-color: var(--bg);
-            background-image: radial-gradient(circle at 2px 2px, #CBD5E0 1px, transparent 0);
-            background-size: 40px 40px;
+            background-image: 
+                radial-gradient(circle at 20px 20px, #CBD5E0 1px, transparent 0),
+                radial-gradient(circle at 60px 60px, #CBD5E0 1px, transparent 0);
+            background-size: 80px 80px;
             overflow: hidden;
             height: 100vh;
             margin: 0;
@@ -31,403 +42,695 @@
 
         .font-game { font-family: 'Fredoka One', cursive; }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-10px) rotate(1deg); }
+        /* Smooth UI Animations */
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); opacity: 1; }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); }
         }
-        .animate-float { animation: float 4s ease-in-out infinite; }
+        .animate-bounce-in { animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
-        @keyframes popIn {
-            0% { transform: scale(0.9); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
-        .pop-in { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .animate-slide-up { animation: slideUp 0.4s ease-out; }
 
-        .neo-button {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(255, 211, 0, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 211, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 211, 0, 0); }
+        }
+        .winner-glow { animation: pulse-gold 2s infinite; border: 4px solid var(--secondary) !important; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E0; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #A0AEC0; }
+
+        /* Neo-Brutalist Buttons */
+        .neo-btn {
             position: relative;
+            transition: all 0.15s ease;
             top: 0;
-            box-shadow: 0 6px 0px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 0px rgba(0,0,0,0.1);
             cursor: pointer;
         }
-        .neo-button:active {
-            top: 4px;
+        .neo-btn:active {
+            top: 6px;
             box-shadow: 0 2px 0px rgba(0,0,0,0.1);
         }
-        .neo-button-primary {
-            background: var(--primary);
-            color: white;
-            box-shadow: 0 6px 0px var(--primary-dark);
+        .neo-btn-primary { background: var(--primary); color: white; box-shadow: 0 8px 0px var(--primary-dark); }
+        .neo-btn-accent { background: var(--accent); color: white; box-shadow: 0 8px 0px #D81B60; }
+
+        /* Layout Components */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 2px solid white;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.05);
         }
 
-        .avatar-container {
-            width: 160px;
-            height: 160px;
-            border-radius: 40px;
-            border: 6px solid white;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            position: relative;
-            background: #F7FAFC;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .avatar-img { width: 100%; height: 100%; object-fit: cover; }
-        .accessory-overlay {
-            position: absolute;
-            top: 10%;
-            right: 10%;
-            font-size: 3rem;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        #canvas-wrapper {
+        #canvas-container {
             position: relative;
             background: white;
-            flex-grow: 1;
-            border-radius: 30px;
-            overflow: hidden;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+            border-radius: 40px;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.03);
             cursor: crosshair;
+            overflow: hidden;
         }
 
-        canvas { display: block; touch-action: none; width: 100%; height: 100%; }
+        canvas { display: block; touch-action: none; }
 
         .overlay-full {
             position: absolute;
             inset: 0;
-            z-index: 100;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            color: white;
+        }
+
+        .tool-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(15, 23, 42, 0.9);
-            backdrop-filter: blur(8px);
+            transition: all 0.2s;
+            background: #F8FAFC;
+            border: 2px solid #E2E8F0;
         }
+        .tool-btn.active { background: var(--primary); color: white; border-color: var(--primary-dark); transform: scale(1.1); }
 
-        .color-swatch {
-            width: 32px;
-            height: 32px;
-            border-radius: 10px;
+        .color-dot {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
             cursor: pointer;
-            border: 2px solid #ddd;
-            transition: transform 0.1s;
+            border: 3px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
         }
-        .color-swatch.active { transform: scale(1.2); border: 2px solid black; }
+        .color-dot:hover { transform: scale(1.2); }
+        .color-dot.selected { transform: scale(1.3); border-color: #000; }
 
-        .chat-disabled {
-            background-color: #f1f5f9 !important;
-            cursor: not-allowed;
-            opacity: 0.6;
+        /* Notification Toast */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        .toast {
+            background: white;
+            padding: 12px 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            animation: slideInRight 0.3s ease-out;
+        }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Drawing Animation */
+        .drawing-cursor {
+            pointer-events: none;
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid black;
+            z-index: 100;
         }
     </style>
 </head>
 <body>
 
-    <!-- MENU SCREEN -->
-    <div id="screen-menu" class="w-full max-w-6xl px-6 flex flex-col md:flex-row gap-12 items-center z-10 pop-in">
-        <div class="flex flex-col items-center gap-6 w-full md:w-1/2">
-            <div class="relative">
-                <div class="avatar-container animate-float" id="avatar-preview">
-                    <span id="display-emoji" class="text-7xl">🐶</span>
-                    <img id="display-upload" class="avatar-img hidden" src="">
-                    <div id="display-accessory" class="accessory-overlay">👑</div>
+    <div id="toast-container"></div>
+
+    <!-- START SCREEN -->
+    <div id="screen-setup" class="w-full max-w-5xl px-8 flex flex-col md:flex-row gap-16 items-center animate-bounce-in">
+        <div class="flex flex-col items-center gap-8 w-full md:w-1/2">
+            <div class="relative group">
+                <div id="avatar-circle" class="w-48 h-48 rounded-[60px] bg-white border-8 border-white shadow-2xl flex items-center justify-center text-8xl overflow-hidden">
+                    <span id="char-emoji">🦄</span>
+                    <img id="char-img" class="hidden w-full h-full object-cover" src="">
                 </div>
-                <label class="absolute bottom-2 right-2 bg-white p-3 rounded-2xl shadow-lg cursor-pointer">
-                    <input type="file" id="pfp-upload" class="hidden" accept="image/*">
-                    📸
+                <div id="acc-preview" class="absolute -top-4 -right-4 text-6xl drop-shadow-lg">✨</div>
+                
+                <label class="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white p-3 rounded-2xl shadow-xl cursor-pointer hover:bg-indigo-700 transition-colors">
+                    <input type="file" id="upload-pfp" class="hidden" accept="image/*">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 </label>
             </div>
-            <div class="bg-white p-6 rounded-[40px] shadow-xl w-full">
-                <div class="grid grid-cols-2 gap-4">
-                    <div id="base-options" class="grid grid-cols-4 gap-2"></div>
-                    <div id="acc-options" class="grid grid-cols-4 gap-2"></div>
+
+            <div class="glass-panel p-6 rounded-[40px] w-full grid grid-cols-2 gap-6">
+                <div class="space-y-3">
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Character</p>
+                    <div id="list-emoji" class="grid grid-cols-4 gap-2"></div>
+                </div>
+                <div class="space-y-3">
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Accessory</p>
+                    <div id="list-acc" class="grid grid-cols-4 gap-2"></div>
                 </div>
             </div>
         </div>
-        <div class="w-full md:w-1/2 flex flex-col gap-8">
-            <h1 class="text-8xl font-game text-slate-800 tracking-tighter">Sketch<span class="text-indigo-600">Dash</span></h1>
-            <div class="bg-white p-8 rounded-[50px] shadow-2xl space-y-6">
-                <input type="text" id="username" placeholder="Username" class="w-full p-5 rounded-3xl bg-slate-50 border-2 outline-none font-bold text-lg">
-                <button onclick="joinGame()" class="w-full py-6 rounded-[35px] neo-button neo-button-primary font-game text-3xl">PLAY NOW</button>
+
+        <div class="w-full md:w-1/2 space-y-10">
+            <div class="space-y-2">
+                <h1 class="text-8xl font-game text-slate-800 leading-none">Sketch<span class="text-indigo-600">Dash</span></h1>
+                <p class="text-xl font-bold text-slate-500">The fastest drawer in the west.</p>
+            </div>
+
+            <div class="glass-panel p-10 rounded-[50px] space-y-8">
+                <div class="relative">
+                    <input type="text" id="input-username" maxlength="12" placeholder="Enter Nickname..." class="w-full p-6 pl-8 rounded-3xl bg-slate-50 border-4 border-transparent focus:border-indigo-400 outline-none font-bold text-2xl transition-all">
+                </div>
+                <button onclick="startGame()" class="w-full py-8 rounded-[35px] neo-btn neo-btn-primary font-game text-4xl tracking-wide">PLAY NOW</button>
+                <p id="error-msg" class="text-center text-red-500 font-bold hidden"></p>
             </div>
         </div>
     </div>
 
     <!-- GAME SCREEN -->
-    <div id="screen-game" class="hidden w-full max-w-[1400px] h-[95vh] flex flex-col gap-4 px-4">
-        <div class="flex items-center justify-between bg-white p-4 rounded-[30px] shadow-xl shrink-0">
-            <div class="flex items-center gap-6">
-                <div class="text-center">
-                    <p class="text-[10px] font-black uppercase text-slate-400">Round</p>
-                    <p id="round-counter" class="font-game text-2xl">1/10</p>
+    <div id="screen-game" class="hidden w-full h-full max-w-[1600px] max-h-[900px] p-4 flex flex-col gap-4 animate-slide-up">
+        
+        <!-- Top Bar -->
+        <header class="glass-panel h-24 rounded-[30px] flex items-center px-8 justify-between shrink-0">
+            <div class="flex items-center gap-10">
+                <div class="flex flex-col items-center">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Round</span>
+                    <span id="ui-round" class="font-game text-3xl text-slate-700">1/10</span>
                 </div>
-                <div class="text-center">
-                    <p class="text-[10px] font-black uppercase text-slate-400">Time</p>
-                    <p id="timer" class="font-game text-2xl text-pink-500">60</p>
-                </div>
-                <div class="flex flex-col items-center px-8">
-                    <p id="word-display" class="font-game text-3xl tracking-[0.4em] text-indigo-600">_ _ _ _</p>
-                    <p id="turn-status" class="text-[10px] font-bold text-slate-400 uppercase">Waiting...</p>
+                <div class="h-10 w-px bg-slate-200"></div>
+                <div class="flex flex-col items-center">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Time</span>
+                    <span id="ui-timer" class="font-game text-3xl text-pink-500">60</span>
                 </div>
             </div>
-        </div>
 
-        <div class="flex-1 flex gap-4 min-h-0">
-            <!-- Sidebar -->
-            <div class="w-64 bg-white rounded-[40px] shadow-xl p-6 flex flex-col gap-4 overflow-y-auto" id="player-list"></div>
+            <div class="flex flex-col items-center flex-1">
+                <div id="ui-word-box" class="flex gap-3">
+                    <!-- Word blanks go here -->
+                </div>
+                <p id="ui-hint" class="text-xs font-bold text-indigo-400 mt-1 uppercase tracking-tighter">Waiting for round...</p>
+            </div>
 
-            <!-- Canvas Area -->
-            <div id="canvas-wrapper">
-                <canvas id="game-canvas"></canvas>
-                
-                <div id="artist-controls" class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white shadow-2xl p-4 rounded-[35px] flex items-center gap-4 hidden">
-                    <div id="color-palette" class="grid grid-cols-9 gap-2"></div>
-                    <button onclick="clearCanvas()" class="px-4 py-2 bg-red-50 text-red-500 font-bold rounded-xl text-sm">CLEAR</button>
+            <div class="flex items-center gap-4">
+                <button onclick="toggleSound()" id="btn-sound" class="p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Body -->
+        <main class="flex-1 flex gap-4 min-h-0">
+            
+            <!-- Left Sidebar (Scoreboard) -->
+            <aside class="w-72 glass-panel rounded-[40px] flex flex-col p-6 overflow-hidden">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 px-2">Players</h3>
+                <div id="ui-players" class="flex-1 space-y-4 overflow-y-auto pr-2">
+                    <!-- Players rendered here -->
+                </div>
+            </aside>
+
+            <!-- Center (Canvas Area) -->
+            <section id="canvas-container" class="flex-1">
+                <canvas id="main-canvas"></canvas>
+
+                <!-- Drawing Toolbar -->
+                <div id="draw-tools" class="absolute bottom-8 left-1/2 -translate-x-1/2 glass-panel p-4 rounded-[35px] flex items-center gap-6 shadow-2xl hidden">
+                    <div class="flex items-center gap-2 border-r pr-6">
+                        <button class="tool-btn active" data-tool="brush">🖌️</button>
+                        <button class="tool-btn" data-tool="eraser">🧽</button>
+                    </div>
+                    
+                    <div id="palette" class="flex gap-2 pr-6 border-r">
+                        <!-- Colors injected here -->
+                    </div>
+
+                    <div class="flex items-center gap-4 pr-6 border-r">
+                        <div class="w-32 h-2 bg-slate-100 rounded-full relative">
+                            <input type="range" id="brush-size" min="2" max="40" value="8" class="absolute inset-0 opacity-0 cursor-pointer">
+                            <div id="size-progress" class="h-full bg-indigo-500 rounded-full" style="width: 25%"></div>
+                        </div>
+                        <span id="size-val" class="text-xs font-bold text-slate-400 w-6">8</span>
+                    </div>
+
+                    <button onclick="clearCanvas()" class="px-6 py-3 bg-red-50 text-red-500 font-black rounded-2xl hover:bg-red-100 transition-colors text-xs uppercase tracking-widest">
+                        Clear
+                    </button>
                 </div>
 
-                <!-- Selection Overlay -->
-                <div id="overlay-selection" class="overlay-full hidden">
-                    <div class="text-center text-white space-y-8">
-                        <h2 class="font-game text-4xl">PICK A WORD TO DRAW</h2>
-                        <div id="word-choices" class="flex gap-4 justify-center"></div>
+                <!-- Overlays -->
+                <div id="overlay-waiting" class="overlay-full">
+                    <div class="animate-bounce text-6xl mb-6">🎨</div>
+                    <h2 class="font-game text-4xl">Waiting for more friends...</h2>
+                    <p class="text-slate-400 mt-2 font-bold">(Minimum 2 players needed)</p>
+                </div>
+
+                <div id="overlay-picking" class="overlay-full hidden">
+                    <h2 class="font-game text-5xl mb-12">Choose your masterpiece</h2>
+                    <div id="word-options" class="flex gap-6">
+                        <!-- Word buttons here -->
                     </div>
                 </div>
 
-                <!-- Intermission/Waiting Overlays -->
-                <div id="overlay-waiting" class="overlay-full hidden"><h2 class="font-game text-white text-4xl">WAITING FOR PLAYERS...</h2></div>
-                <div id="overlay-intermission" class="overlay-full hidden text-white text-center">
-                    <p class="text-xl">The word was</p>
-                    <h2 id="result-word" class="font-game text-6xl text-yellow-400">...</h2>
+                <div id="overlay-results" class="overlay-full hidden">
+                    <p class="text-indigo-300 font-bold uppercase tracking-[0.3em] mb-2">Round Finished</p>
+                    <h2 id="res-word" class="font-game text-8xl text-yellow-400 mb-8">APPLE</h2>
+                    <div id="res-winner" class="flex items-center gap-4 bg-white/10 p-6 rounded-3xl backdrop-blur-md">
+                        <div id="res-avatar" class="text-5xl">🐱</div>
+                        <div class="text-left">
+                            <p id="res-name" class="font-game text-2xl">ArtistName</p>
+                            <p class="text-sm opacity-70">was the first to guess!</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Chat Area -->
-            <div class="w-80 bg-white rounded-[40px] shadow-xl flex flex-col overflow-hidden">
-                <div id="chat-feed" class="flex-1 overflow-y-auto p-4 space-y-2 text-sm"></div>
-                <div class="p-4 border-t">
-                    <input type="text" id="guess-input" placeholder="Type your guess..." class="w-full p-4 rounded-2xl bg-slate-50 outline-none font-bold">
+                <div id="overlay-final" class="overlay-full hidden">
+                    <h2 class="font-game text-7xl text-white mb-10">Hall of Fame</h2>
+                    <div id="final-podium" class="w-full max-w-2xl space-y-4">
+                        <!-- Top scorers here -->
+                    </div>
+                    <button onclick="location.reload()" class="mt-12 px-12 py-6 neo-btn neo-btn-primary font-game text-2xl rounded-full">PLAY AGAIN</button>
                 </div>
-            </div>
-        </div>
+            </section>
+
+            <!-- Right Sidebar (Chat) -->
+            <aside class="w-80 glass-panel rounded-[40px] flex flex-col overflow-hidden">
+                <div class="p-6 border-b bg-slate-50/50">
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Live Feed</h3>
+                </div>
+                
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4 font-bold text-sm">
+                    <!-- Messages here -->
+                </div>
+
+                <div class="p-6 bg-slate-50/50">
+                    <div class="relative">
+                        <input type="text" id="chat-input" placeholder="Type guess here..." class="w-full p-4 pl-6 rounded-2xl bg-white border-2 border-transparent focus:border-indigo-400 outline-none shadow-sm transition-all font-bold">
+                        <div class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+        </main>
     </div>
 
+    <!-- AUDIO ASSETS (Mocked via Web Audio API) -->
     <script>
-        let socket;
-        const state = {
-            user: { name: 'Artist', base: '🐶', accessory: '👑', pfp: null },
-            gameState: {},
-            isDrawing: false,
-            brush: { color: '#000000', size: 4 },
-            lastPos: { x: 0, y: 0 }
+        const AudioEngine = {
+            ctx: new (window.AudioContext || window.webkitAudioContext)(),
+            enabled: true,
+            play(type) {
+                if (!this.enabled) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                const now = this.ctx.currentTime;
+                if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(800, now);
+                    osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.1);
+                    osc.start(); osc.stop(now + 0.1);
+                } else if (type === 'success') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.4);
+                    osc.start(); osc.stop(now + 0.4);
+                }
+            }
         };
 
-        const canvas = document.getElementById('game-canvas');
-        const ctx = canvas.getContext('2d');
-        const wrapper = document.getElementById('canvas-wrapper');
+        function toggleSound() {
+            AudioEngine.enabled = !AudioEngine.enabled;
+            document.getElementById('btn-sound').style.opacity = AudioEngine.enabled ? "1" : "0.4";
+        }
+    </script>
 
-        const colors = [
-            '#000000', '#555555', '#aaaaaa', '#ffffff', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3',
-            '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800'
+    <script>
+        // --- CONSTANTS & STATE ---
+        // io is now guaranteed to be defined because of the reliable CDN import above
+        const socket = io();
+        let myId = null;
+        const state = {
+            username: '',
+            base: '🦄',
+            acc: '✨',
+            pfp: null,
+            gameState: {},
+            isDrawing: false,
+            currentTool: 'brush',
+            brush: { color: '#1E293B', size: 8 },
+            lastPoint: null,
+            points: []
+        };
+
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+
+        const PALETTE = [
+            '#000000', '#475569', '#94A3B8', '#FFFFFF',
+            '#EF4444', '#F97316', '#F59E0B', '#10B981',
+            '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899'
         ];
 
-        function setupUI() {
-            const bCont = document.getElementById('base-options');
-            const aCont = document.getElementById('acc-options');
-            const cCont = document.getElementById('color-palette');
+        // --- INITIALIZATION ---
+        function initSetup() {
+            const emojis = ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔'];
+            const accs = ['👑','🎩','🧢','🕶️','🎀','🎓','🎧','🔥','⭐','🍀','🍎','🍦','','','',''];
+            
+            const eContainer = document.getElementById('list-emoji');
+            const aContainer = document.getElementById('list-acc');
+            const pContainer = document.getElementById('palette');
 
-            ['🐱','🐶','🦊','🐻','🐼','🐸','🐵','🤖'].forEach(b => {
+            emojis.forEach(e => {
                 const btn = document.createElement('button');
-                btn.className = "p-2 bg-slate-50 rounded-lg text-xl";
-                btn.innerText = b;
-                btn.onclick = () => { 
-                    state.user.base = b; 
-                    state.user.pfp = null;
-                    document.getElementById('display-emoji').innerText = b;
-                    document.getElementById('display-emoji').classList.remove('hidden');
-                    document.getElementById('display-upload').classList.add('hidden');
+                btn.className = "text-2xl p-2 hover:bg-slate-100 rounded-xl transition-all";
+                btn.innerText = e;
+                btn.onclick = () => {
+                    state.base = e; state.pfp = null;
+                    document.getElementById('char-emoji').innerText = e;
+                    document.getElementById('char-emoji').classList.remove('hidden');
+                    document.getElementById('char-img').classList.add('hidden');
+                    AudioEngine.play('click');
                 };
-                bCont.appendChild(btn);
+                eContainer.appendChild(btn);
             });
 
-            ['👑','🎩','🕶️','🎀','🔥','🍀','⭐',''].forEach(a => {
+            accs.forEach(a => {
                 const btn = document.createElement('button');
-                btn.className = "p-2 bg-slate-50 rounded-lg text-xl";
+                btn.className = "text-2xl p-2 hover:bg-slate-100 rounded-xl transition-all";
                 btn.innerText = a || '❌';
-                btn.onclick = () => { 
-                    state.user.accessory = a; 
-                    document.getElementById('display-accessory').innerText = a;
+                btn.onclick = () => {
+                    state.acc = a;
+                    document.getElementById('acc-preview').innerText = a;
+                    AudioEngine.play('click');
                 };
-                aCont.appendChild(btn);
+                aContainer.appendChild(btn);
             });
 
-            colors.forEach(c => {
-                const div = document.createElement('div');
-                div.className = "color-swatch";
-                div.style.background = c;
-                div.onclick = () => {
+            PALETTE.forEach(c => {
+                const dot = document.createElement('div');
+                dot.className = `color-dot ${c === state.brush.color ? 'selected' : ''}`;
+                dot.style.backgroundColor = c;
+                dot.onclick = () => {
                     state.brush.color = c;
-                    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
-                    div.classList.add('active');
+                    document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+                    dot.classList.add('selected');
+                    AudioEngine.play('click');
                 };
-                cCont.appendChild(div);
+                pContainer.appendChild(dot);
             });
 
-            document.getElementById('pfp-upload').onchange = (e) => {
+            document.getElementById('upload-pfp').onchange = (e) => {
+                const file = e.target.files[0];
+                if(!file) return;
                 const reader = new FileReader();
-                reader.onload = (ev) => {
-                    state.user.pfp = ev.target.result;
-                    document.getElementById('display-upload').src = ev.target.result;
-                    document.getElementById('display-upload').classList.remove('hidden');
-                    document.getElementById('display-emoji').classList.add('hidden');
+                reader.onload = (event) => {
+                    state.pfp = event.target.result;
+                    const img = document.getElementById('char-img');
+                    img.src = state.pfp;
+                    img.classList.remove('hidden');
+                    document.getElementById('char-emoji').classList.add('hidden');
                 };
-                reader.readAsDataURL(e.target.files[0]);
+                reader.readAsDataURL(file);
+            };
+
+            document.querySelectorAll('[data-tool]').forEach(btn => {
+                btn.onclick = () => {
+                    state.currentTool = btn.dataset.tool;
+                    document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                };
+            });
+
+            document.getElementById('brush-size').oninput = (e) => {
+                const val = e.target.value;
+                state.brush.size = val;
+                document.getElementById('size-val').innerText = val;
+                document.getElementById('size-progress').style.width = `${(val/40)*100}%`;
             };
         }
 
-        function joinGame() {
-            socket = io();
-            state.user.name = document.getElementById('username').value || "Artist";
-            socket.emit('join_game', state.user);
-            document.getElementById('screen-menu').classList.add('hidden');
+        function startGame() {
+            const nick = document.getElementById('input-username').value.trim();
+            if(!nick) {
+                const err = document.getElementById('error-msg');
+                err.innerText = "Please enter a name!";
+                err.classList.remove('hidden');
+                return;
+            }
+            state.username = nick;
+            socket.emit('join_game', { name: nick, base: state.base, accessory: state.acc, pfp: state.pfp });
+            
+            document.getElementById('screen-setup').classList.add('hidden');
             document.getElementById('screen-game').classList.remove('hidden');
+            
+            myId = socket.id;
             resizeCanvas();
-            initSocketEvents();
-            initDrawingEvents();
+            initDrawingLogic();
+            AudioEngine.play('success');
         }
 
         function resizeCanvas() {
-            canvas.width = wrapper.clientWidth;
-            canvas.height = wrapper.clientHeight;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
+            // Trigger redrawing if needed or clear
+            if(state.gameState.status === 'intermission') clearCanvas();
         }
 
-        function initDrawingEvents() {
-            const start = (e) => {
+        // --- DRAWING ENGINE ---
+        function initDrawingLogic() {
+            const getPointerPos = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+                const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+                return { x, y };
+            };
+
+            const startDraw = (e) => {
                 if (state.gameState.drawerId !== socket.id || state.gameState.status !== 'active') return;
                 state.isDrawing = true;
-                state.lastPos = getPos(e);
+                state.lastPoint = getPointerPos(e);
             };
-            const move = (e) => {
+
+            const moveDraw = (e) => {
                 if (!state.isDrawing) return;
-                const pos = getPos(e);
-                const stroke = { from: state.lastPos, to: pos, color: state.brush.color, size: state.brush.size };
+                const currentPoint = getPointerPos(e);
+                
+                const stroke = {
+                    from: state.lastPoint,
+                    to: currentPoint,
+                    color: state.currentTool === 'eraser' ? '#FFFFFF' : state.brush.color,
+                    size: state.currentTool === 'eraser' ? state.brush.size * 2 : state.brush.size
+                };
+
                 drawStroke(stroke);
                 socket.emit('draw_stroke', stroke);
-                state.lastPos = pos;
-                e.preventDefault();
+                state.lastPoint = currentPoint;
+                if(e.cancelable) e.preventDefault();
             };
-            const stop = () => state.isDrawing = false;
 
-            canvas.addEventListener('mousedown', start);
-            window.addEventListener('mousemove', move);
-            window.addEventListener('mouseup', stop);
-            
-            canvas.addEventListener('touchstart', start);
-            canvas.addEventListener('touchmove', move, { passive: false });
-            window.addEventListener('touchend', stop);
-        }
+            const endDraw = () => state.isDrawing = false;
 
-        function getPos(e) {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return { x: clientX - rect.left, y: clientY - rect.top };
+            canvas.addEventListener('mousedown', startDraw);
+            window.addEventListener('mousemove', moveDraw);
+            window.addEventListener('mouseup', endDraw);
+
+            canvas.addEventListener('touchstart', startDraw, {passive: false});
+            window.addEventListener('touchmove', moveDraw, {passive: false});
+            window.addEventListener('touchend', endDraw);
         }
 
         function drawStroke(s) {
+            ctx.beginPath();
             ctx.strokeStyle = s.color;
             ctx.lineWidth = s.size;
-            ctx.beginPath();
             ctx.moveTo(s.from.x, s.from.y);
             ctx.lineTo(s.to.x, s.to.y);
             ctx.stroke();
+            ctx.closePath();
         }
 
-        function clearCanvas() { socket.emit('clear_canvas'); }
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if(state.gameState.drawerId === socket.id) socket.emit('clear_canvas');
+        }
 
-        function initSocketEvents() {
-            socket.on('player_list_update', (list) => {
-                const cont = document.getElementById('player-list');
-                cont.innerHTML = list.sort((a,b) => b.score - a.score).map(p => `
-                    <div class="flex items-center gap-3 p-3 rounded-2xl ${p.id === state.gameState.drawerId ? 'bg-indigo-50 border-2 border-indigo-200' : 'bg-slate-50'}">
-                        <div class="w-10 h-10 rounded-lg bg-white overflow-hidden flex items-center justify-center text-xl shadow-sm">
+        // --- SOCKET EVENT HANDLERS ---
+        socket.on('player_list_update', (players) => {
+            const container = document.getElementById('ui-players');
+            container.innerHTML = players.sort((a,b) => b.score - a.score).map((p, idx) => `
+                <div class="flex items-center gap-4 p-4 rounded-3xl transition-all ${p.id === state.gameState.drawerId ? 'bg-indigo-50 border-2 border-indigo-100' : 'bg-slate-50'}">
+                    <div class="relative">
+                        <div class="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-2xl overflow-hidden">
                             ${p.pfp ? `<img src="${p.pfp}" class="w-full h-full object-cover">` : p.base}
                         </div>
-                        <div class="min-w-0">
-                            <p class="text-xs font-black truncate">${p.name}</p>
-                            <p class="text-[10px] font-bold text-slate-400">${p.score} PTS</p>
+                        <div class="absolute -top-2 -right-2 text-xl">${p.accessory || ''}</div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-black text-slate-800 truncate">${p.name} ${p.id === socket.id ? '(You)' : ''}</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${p.score} Points</p>
+                    </div>
+                    ${state.gameState.winners.includes(p.id) ? '<div class="text-green-500">✅</div>' : ''}
+                </div>
+            `).join('');
+        });
+
+        socket.on('game_state_update', (gs) => {
+            state.gameState = gs;
+            const isDrawer = gs.drawerId === socket.id;
+            const hasGuessed = gs.winners.includes(socket.id);
+
+            // Update Header
+            document.getElementById('ui-round').innerText = `${gs.round}/10`;
+            document.getElementById('ui-timer').innerText = gs.timer;
+            
+            // Draw controls visibility
+            document.getElementById('draw-tools').classList.toggle('hidden', !isDrawer || gs.status !== 'active');
+
+            // Word display logic
+            const wordBox = document.getElementById('ui-word-box');
+            wordBox.innerHTML = '';
+            const displayWord = (isDrawer || hasGuessed || gs.status === 'intermission') ? gs.currentWord : gs.currentWord.replace(/[A-Z]/g, '_');
+            
+            displayWord.split('').forEach(char => {
+                const span = document.createElement('span');
+                span.className = `w-8 h-10 flex items-center justify-center font-game text-3xl ${char === '_' ? 'border-b-4 border-slate-300' : 'text-indigo-600'}`;
+                span.innerText = char === ' ' ? '' : char;
+                wordBox.appendChild(span);
+            });
+
+            // Status Overlays
+            document.getElementById('overlay-waiting').classList.toggle('hidden', Object.keys(gs.players || {}).length >= 2 || gs.status !== 'waiting');
+            document.getElementById('overlay-picking').classList.toggle('hidden', !isDrawer || gs.status !== 'selecting');
+            document.getElementById('overlay-results').classList.toggle('hidden', gs.status !== 'intermission');
+            document.getElementById('overlay-final').classList.toggle('hidden', gs.status !== 'game_over');
+
+            if (isDrawer && gs.status === 'selecting') {
+                const optContainer = document.getElementById('word-options');
+                optContainer.innerHTML = gs.wordChoices.map(w => `
+                    <button onclick="socket.emit('word_selected', '${w}')" class="px-10 py-6 bg-white text-indigo-600 rounded-[30px] font-game text-2xl neo-btn shadow-none hover:scale-105 transition-transform">
+                        ${w}
+                    </button>
+                `).join('');
+            }
+
+            if (gs.status === 'intermission') {
+                document.getElementById('res-word').innerText = gs.currentWord;
+                const winnerId = gs.winners[0];
+                const winner = gs.players ? Object.values(gs.players).find(p => p.id === winnerId) : null;
+                if(winner) {
+                    document.getElementById('res-avatar').innerText = winner.base;
+                    document.getElementById('res-name').innerText = winner.name;
+                }
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+
+            if (gs.status === 'game_over') {
+                const podium = document.getElementById('final-podium');
+                const sorted = Object.values(gs.players || {}).sort((a,b) => b.score - a.score);
+                podium.innerHTML = sorted.map((p, i) => `
+                    <div class="flex items-center gap-6 bg-white/10 p-4 rounded-3xl w-full">
+                        <span class="font-game text-4xl w-12">${i+1}</span>
+                        <div class="w-16 h-16 rounded-2xl bg-white flex items-center justify-center text-4xl">
+                            ${p.pfp ? `<img src="${p.pfp}" class="w-full h-full object-cover">` : p.base}
                         </div>
+                        <div class="flex-1">
+                            <p class="font-game text-2xl">${p.name}</p>
+                            <p class="font-bold opacity-60">${p.score} Total Points</p>
+                        </div>
+                        ${i === 0 ? '<span class="text-4xl">🏆</span>' : ''}
                     </div>
                 `).join('');
-                document.getElementById('overlay-waiting').classList.toggle('hidden', list.length >= 2);
-            });
+            }
 
-            socket.on('game_state_update', (gs) => {
-                state.gameState = gs;
-                const isDrawer = gs.drawerId === socket.id;
-                const hasGuessed = gs.winners.includes(socket.id);
+            // Input handling
+            const input = document.getElementById('chat-input');
+            if(isDrawer) {
+                input.disabled = true;
+                input.placeholder = "Drawing time! 🎨";
+                input.value = "";
+            } else if(hasGuessed) {
+                input.disabled = true;
+                input.placeholder = "Correct! Shhh... 🤫";
+                input.value = "";
+            } else {
+                input.disabled = false;
+                input.placeholder = "Type your guess...";
+            }
+        });
 
-                document.getElementById('round-counter').innerText = `${gs.round}/10`;
-                document.getElementById('artist-controls').classList.toggle('hidden', !isDrawer || gs.status !== 'active');
-                
-                // Typing Rules
-                const input = document.getElementById('guess-input');
-                if (isDrawer) {
-                    input.disabled = true;
-                    input.placeholder = "You are drawing!";
-                    input.classList.add('chat-disabled');
-                } else if (hasGuessed) {
-                    input.disabled = true;
-                    input.placeholder = "Correct! Waiting for others...";
-                    input.classList.add('chat-disabled');
-                } else {
-                    input.disabled = false;
-                    input.placeholder = "Type your guess...";
-                    input.classList.remove('chat-disabled');
-                }
+        socket.on('timer_update', (t) => {
+            document.getElementById('ui-timer').innerText = t;
+            if(t <= 10) {
+                document.getElementById('ui-timer').classList.add('animate-pulse');
+            } else {
+                document.getElementById('ui-timer').classList.remove('animate-pulse');
+            }
+        });
 
-                // UI states
-                document.getElementById('overlay-selection').classList.toggle('hidden', !isDrawer || gs.status !== 'selecting');
-                if (isDrawer && gs.status === 'selecting') {
-                    const choiceCont = document.getElementById('word-choices');
-                    choiceCont.innerHTML = gs.wordChoices.map(w => `
-                        <button onclick="socket.emit('word_selected', '${w}')" class="px-8 py-4 bg-indigo-600 rounded-2xl font-game text-xl hover:bg-indigo-500">${w}</button>
-                    `).join('');
-                }
+        socket.on('remote_draw', (s) => drawStroke(s));
+        socket.on('remote_clear', () => ctx.clearRect(0, 0, canvas.width, canvas.height));
 
-                document.getElementById('word-display').innerText = isDrawer || hasGuessed ? gs.currentWord : gs.currentWord.replace(/[A-Z]/g, '_ ');
-                document.getElementById('overlay-intermission').classList.toggle('hidden', gs.status !== 'intermission');
-                if (gs.status === 'intermission') {
-                    document.getElementById('result-word').innerText = gs.currentWord;
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                }
-            });
+        socket.on('new_message', (msg) => {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = "p-3 bg-slate-50 rounded-2xl animate-slide-up";
+            div.innerHTML = `<span class="text-indigo-500 uppercase text-[10px] block mb-1">${msg.user}</span> ${msg.text}`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        });
 
-            socket.on('timer_update', (t) => { document.getElementById('timer').innerText = t; });
-            socket.on('remote_draw', drawStroke);
-            socket.on('remote_clear', () => ctx.clearRect(0, 0, canvas.width, canvas.height));
-            socket.on('new_message', (msg) => {
-                const feed = document.getElementById('chat-feed');
-                const div = document.createElement('div');
-                div.innerHTML = `<span class="font-black uppercase text-[10px] text-slate-400">${msg.user}:</span> ${msg.text}`;
-                feed.appendChild(div);
-                feed.scrollTop = feed.scrollHeight;
-            });
-            socket.on('correct_guess', (data) => {
-                const feed = document.getElementById('chat-feed');
-                const div = document.createElement('div');
-                div.className = "text-green-600 font-bold italic";
-                div.innerText = `${data.playerName} guessed correctly!`;
-                feed.appendChild(div);
-                feed.scrollTop = feed.scrollHeight;
-            });
+        socket.on('correct_guess', (data) => {
+            AudioEngine.play('success');
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = "p-3 bg-green-50 text-green-600 rounded-2xl border-2 border-green-100 text-center";
+            div.innerHTML = `🌟 <b>${data.playerName}</b> guessed the word!`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            
+            // Trigger Toast
+            showToast(`🎉 ${data.playerName} got it!`);
+        });
+
+        function showToast(text) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = text;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
         }
 
-        document.getElementById('guess-input').onkeypress = (e) => {
+        document.getElementById('chat-input').onkeypress = (e) => {
             if (e.key === 'Enter') {
                 const val = e.target.value.trim();
                 if (val) socket.emit('send_message', val);
@@ -435,7 +738,8 @@
             }
         };
 
-        window.onload = setupUI;
+        window.onload = initSetup;
+        window.onresize = resizeCanvas;
     </script>
 </body>
 </html>
