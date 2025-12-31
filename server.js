@@ -4,23 +4,31 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000; // Render uses port 10000 by default
 
 // --- MIDDLEWARE ---
 app.use(cors());
 app.use(express.json());
 
-// Tell the server to serve all frontend files from the 'public' folder
+// Serve all frontend files from the 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- DATABASE CONNECTION ---
-// For local testing, use 'mongodb://127.0.0.1:27017/vikvok_live'
-// For Render/Production, you will replace this with your MongoDB Atlas Connection String
-const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/vikvok_live';
+// We use ONLY the environment variable to ensure it connects to Atlas
+const mongoURI = process.env.MONGODB_URI;
+
+console.log("--- System Check ---");
+if (mongoURI) {
+    console.log("✅ MONGODB_URI detected in environment.");
+} else {
+    console.log("❌ ERROR: MONGODB_URI is missing from Render Environment Variables.");
+}
 
 mongoose.connect(mongoURI)
-    .then(() => console.log("✅ VikVok Database Connected"))
-    .catch(err => console.error("❌ DB Connection Error:", err));
+    .then(() => console.log("🚀 SUCCESS: VikVok Database Connected to Atlas"))
+    .catch(err => {
+        console.error("❌ CONNECTION FAILED:", err.message);
+    });
 
 // --- DATA MODELS ---
 const UserSchema = new mongoose.Schema({
@@ -45,14 +53,14 @@ const VideoSchema = new mongoose.Schema({
 const User = mongoose.model('User', UserSchema);
 const Video = mongoose.model('Video', VideoSchema);
 
-// --- ROUTES ---
+// --- API ROUTES ---
 
-// 1. Root Route - Serves index.html from public folder
+// 1. Root Route
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 2. Sign Up - Checks for unique username/email
+// 2. Sign Up (Prevents duplicates via MongoDB unique indexes)
 app.post('/api/signup', async (req, res) => {
     try {
         const { username, email, password } = req.body;
@@ -63,68 +71,80 @@ app.post('/api/signup', async (req, res) => {
         if (err.code === 11000) {
             res.status(400).json({ error: "Username or Email already exists!" });
         } else {
-            res.status(500).json({ error: "Server Error during registration" });
+            res.status(500).json({ error: "Server Error: " + err.message });
         }
     }
 });
 
 // 3. Login
 app.post('/api/login', async (req, res) => {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email, password });
-    if (user) {
-        res.json({ username: user.username });
-    } else {
-        res.status(401).json({ error: "Invalid credentials" });
+    try {
+        const { email, password } = req.body;
+        const user = await User.findOne({ email, password });
+        if (user) {
+            res.json({ username: user.username });
+        } else {
+            res.status(401).json({ error: "Invalid credentials" });
+        }
+    } catch (err) {
+        res.status(500).json({ error: "Login failed" });
     }
 });
 
-// 4. Feed - Get all videos
+// 4. Feed
 app.get('/api/videos', async (req, res) => {
     try {
         const videos = await Video.find().sort({ createdAt: -1 });
         res.json(videos);
     } catch (err) {
-        res.status(500).json({ error: "Could not fetch feed" });
+        res.status(500).json({ error: "Could not fetch videos" });
     }
 });
 
-// 5. Upload Video - Starts with 0 likes/comments
+// 5. Upload Video
 app.post('/api/upload', async (req, res) => {
-    const { username, videoUrl, caption } = req.body;
-    const newVideo = new Video({ 
-        username, 
-        videoUrl, 
-        caption,
-        likes: 0,
-        comments: []
-    });
-    await newVideo.save();
-    res.status(201).json(newVideo);
+    try {
+        const { username, videoUrl, caption } = req.body;
+        const newVideo = new Video({ 
+            username, 
+            videoUrl, 
+            caption,
+            likes: 0,
+            comments: []
+        });
+        await newVideo.save();
+        res.status(201).json(newVideo);
+    } catch (err) {
+        res.status(500).json({ error: "Upload failed" });
+    }
 });
 
-// 6. Like Action
+// 6. Like a Video
 app.post('/api/videos/:id/like', async (req, res) => {
     try {
         const video = await Video.findByIdAndUpdate(req.params.id, { $inc: { likes: 1 } }, { new: true });
         res.json(video);
     } catch (err) {
-        res.status(500).json({ error: "Could not like video" });
+        res.status(500).json({ error: "Like failed" });
     }
 });
 
-// 7. Profile Data - Dynamic lookup by username
+// 7. Profile Data
 app.get('/api/profile/:username', async (req, res) => {
-    const user = await User.findOne({ username: req.params.username });
-    if (user) {
-        const userVideos = await Video.find({ username: req.params.username });
-        res.json({ user, videos: userVideos });
-    } else {
-        res.status(404).json({ error: "User profile not found" });
+    try {
+        const user = await User.findOne({ username: req.params.username });
+        if (user) {
+            const userVideos = await Video.find({ username: req.params.username });
+            res.json({ user, videos: userVideos });
+        } else {
+            res.status(404).json({ error: "User not found" });
+        }
+    } catch (err) {
+        res.status(500).json({ error: "Profile fetch failed" });
     }
 });
 
-// Start Server
+// Start
 app.listen(PORT, () => {
-    console.log(`🚀 VikVok Live Server running at http://localhost:${PORT}`);
+    console.log(`📡 VikVok Live Server online at port ${PORT}`);
 });
