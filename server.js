@@ -13,7 +13,6 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // MongoDB Connection
-// Note: Ensure your connection string is set in an environment variable for production
 const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/live-chat';
 mongoose.connect(mongoURI)
     .then(() => console.log('Connected to MongoDB'))
@@ -35,22 +34,29 @@ const messageSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
+// New Schema for Secret Messages
+const secretSchema = new mongoose.Schema({
+    sender: { type: String, required: true },
+    recipient: { type: String, required: true },
+    message: { type: String, required: true },
+    timestamp: { type: Date, default: Date.now },
+    revealed: { type: Boolean, default: false },
+    revealRequestPending: { type: Boolean, default: false }
+});
+
 const User = mongoose.model('User', userSchema);
 const Message = mongoose.model('Message', messageSchema);
+const Secret = mongoose.model('Secret', secretSchema);
 
 // --- AUTHENTICATION ROUTES ---
 
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
-        
-        // Logic: The very first user to register becomes the Developer/Owner by default
         const userCount = await User.countDocuments();
         const role = userCount === 0 ? 'Developer' : 'Member';
-
         const newUser = new User({ username, email, password, role });
         await newUser.save();
-        
         res.json({ success: true, user: { username, role } });
     } catch (err) {
         res.status(400).json({ success: false, message: "Username or Email already exists" });
@@ -60,12 +66,10 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { identifier, password } = req.body;
-        // Find user by either username or email
         const user = await User.findOne({ 
             $or: [{ username: identifier }, { email: identifier }],
             password: password 
         });
-
         if (user) {
             user.lastSeen = new Date();
             await user.save();
@@ -75,6 +79,80 @@ app.post('/api/auth/login', async (req, res) => {
         }
     } catch (err) {
         res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
+// --- SECRET MESSAGING ROUTES ---
+
+// Send a secret message
+app.post('/api/secrets', async (req, res) => {
+    try {
+        const { sender, recipient, message } = req.body;
+        const target = await User.findOne({ username: recipient });
+        if (!target) return res.status(404).json({ success: false, message: "Recipient not found." });
+
+        const newSecret = new Secret({ sender, recipient, message });
+        await newSecret.save();
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false });
+    }
+});
+
+// Get inbox for a user
+app.get('/api/secrets/inbox', async (req, res) => {
+    try {
+        const { username } = req.query;
+        const secrets = await Secret.find({ recipient: username }).sort({ timestamp: -1 });
+        res.json(secrets);
+    } catch (err) {
+        res.status(500).send(err);
+    }
+});
+
+// Request to reveal identity
+app.post('/api/secrets/reveal-request', async (req, res) => {
+    try {
+        const { secretId } = req.body;
+        await Secret.findByIdAndUpdate(secretId, { revealRequestPending: true });
+        res.json({ success: true, message: "Reveal request sent to sender." });
+    } catch (err) {
+        res.status(500).send(err);
+    }
+});
+
+// Check for any pending reveal requests (Polled by all tabs)
+app.get('/api/secrets/check-requests', async (req, res) => {
+    try {
+        const { username } = req.query;
+        const pending = await Secret.findOne({ sender: username, revealRequestPending: true, revealed: false });
+        if (pending) {
+            res.json({ 
+                pendingRequest: true, 
+                secretId: pending._id, 
+                requester: pending.recipient, 
+                message: pending.message 
+            });
+        } else {
+            res.json({ pendingRequest: false });
+        }
+    } catch (err) {
+        res.status(500).send(err);
+    }
+});
+
+// Respond to a reveal request
+app.post('/api/secrets/respond-reveal', async (req, res) => {
+    try {
+        const { secretId, approved } = req.body;
+        if (approved) {
+            await Secret.findByIdAndUpdate(secretId, { revealed: true, revealRequestPending: false });
+        } else {
+            await Secret.findByIdAndUpdate(secretId, { revealRequestPending: false });
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).send(err);
     }
 });
 
@@ -106,7 +184,7 @@ app.get('/api/users', async (req, res) => {
         const statusUsers = users.map(u => ({
             username: u.username,
             role: u.role,
-            isOnline: (now - new Date(u.lastSeen).getTime()) < 30000 // Considered online if seen in last 30s
+            isOnline: (now - new Date(u.lastSeen).getTime()) < 30000
         }));
         res.json(statusUsers);
     } catch (err) {
@@ -114,70 +192,19 @@ app.get('/api/users', async (req, res) => {
     }
 });
 
-app.post('/api/heartbeat', async (req, res) => {
-    try {
-        const { username } = req.body;
-        await User.findOneAndUpdate({ username }, { lastSeen: new Date() });
-        res.sendStatus(200);
-    } catch (err) {
-        res.status(500).send(err);
-    }
-});
-
-// --- SECURE ADMIN & RANKING ROUTES ---
-
-// Update a user's rank (Developer only)
+// Admin Rank Update
 app.put('/api/admin/rank', async (req, res) => {
     try {
         const { adminUsername, targetUsername, newRole } = req.body;
-        
-        // Authorization check
         const admin = await User.findOne({ username: adminUsername });
         if (!admin || (admin.role !== 'Developer' && admin.role !== 'Owner')) {
-            return res.status(403).json({ success: false, message: "Unauthorized: Insufficient permissions." });
-        }
-
-        // Apply the new rank
-        const target = await User.findOneAndUpdate(
-            { username: targetUsername }, 
-            { role: newRole },
-            { new: true }
-        );
-
-        if (!target) return res.status(404).json({ success: false, message: "User not found." });
-
-        res.json({ success: true, user: { username: target.username, role: target.role } });
-    } catch (err) {
-        res.status(500).json({ success: false, message: "Server error during rank update." });
-    }
-});
-
-// Delete a user account (Developer only)
-app.delete('/api/admin/users/:username', async (req, res) => {
-    try {
-        const { adminUsername } = req.query;
-        const admin = await User.findOne({ username: adminUsername });
-        
-        if (!admin || admin.role !== 'Developer') {
             return res.status(403).json({ success: false, message: "Unauthorized" });
         }
-
-        await User.findOneAndDelete({ username: req.params.username });
-        res.json({ success: true });
+        const target = await User.findOneAndUpdate({ username: targetUsername }, { role: newRole }, { new: true });
+        res.json({ success: true, user: { username: target.username, role: target.role } });
     } catch (err) {
-        res.status(500).json({ success: false, message: "Error deleting user" });
+        res.status(500).json({ success: false });
     }
 });
 
-// --- PAGE ROUTING ---
-
-app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public/login.html')));
-app.get('/themes', (req, res) => res.sendFile(path.join(__dirname, 'public/themes.html')));
-app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public/admin.html')));
-
-// Catch-all route to serve the main chat app
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
-
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
