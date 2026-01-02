@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema({
     email: { type: String, unique: true, required: true },
     password: { type: String, required: true },
     role: { type: String, default: 'Member' }, // Roles: Member, Owner, Developer
+    profilePic: { type: String, default: null },
     lastSeen: { type: Date, default: Date.now }
 });
 
@@ -73,12 +74,38 @@ app.post('/api/auth/login', async (req, res) => {
         if (user) {
             user.lastSeen = new Date();
             await user.save();
-            res.json({ success: true, user: { username: user.username, role: user.role } });
+            res.json({ 
+                success: true, 
+                user: { 
+                    username: user.username, 
+                    role: user.role, 
+                    profilePic: user.profilePic 
+                } 
+            });
         } else {
             res.status(401).json({ success: false, message: "Invalid credentials" });
         }
     } catch (err) {
         res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
+// Update profile (PFP, etc)
+app.post('/api/profile/update', async (req, res) => {
+    try {
+        const { username, profilePic } = req.body;
+        const user = await User.findOneAndUpdate(
+            { username }, 
+            { profilePic }, 
+            { new: true }
+        );
+        if (user) {
+            res.json({ success: true, user: { username: user.username, profilePic: user.profilePic, role: user.role } });
+        } else {
+            res.status(404).json({ error: 'User not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false });
     }
 });
 
@@ -160,7 +187,7 @@ app.post('/api/secrets/respond-reveal', async (req, res) => {
 
 app.get('/api/messages', async (req, res) => {
     try {
-        const messages = await Message.find().sort({ timestamp: 1 }).limit(50);
+        const messages = await Message.find().sort({ timestamp: 1 }).limit(100);
         res.json(messages);
     } catch (err) {
         res.status(500).send(err);
@@ -179,11 +206,12 @@ app.post('/api/messages', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
     try {
-        const users = await User.find({}, 'username role lastSeen');
+        const users = await User.find({}, 'username role lastSeen profilePic');
         const now = Date.now();
         const statusUsers = users.map(u => ({
             username: u.username,
             role: u.role,
+            profilePic: u.profilePic,
             isOnline: (now - new Date(u.lastSeen).getTime()) < 30000
         }));
         res.json(statusUsers);
@@ -208,20 +236,10 @@ app.put('/api/admin/rank', async (req, res) => {
 });
 
 // --- PAGE ROUTING ---
-app.get('/themes', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'themes.html'));
-});
-
-app.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-
-app.get('/secret', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'secret.html'));
-});
+app.get('/themes', (req, res) => res.sendFile(path.join(__dirname, 'public', 'themes.html')));
+app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+app.get('/secret', (req, res) => res.sendFile(path.join(__dirname, 'public', 'secret.html')));
+app.get('/profile', (req, res) => res.sendFile(path.join(__dirname, 'public', 'profile.html')));
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
