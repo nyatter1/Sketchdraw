@@ -15,7 +15,6 @@ app.use(cors());
 app.use(express.static('public'));
 
 // MongoDB Connection
-// Note: In a production environment, use process.env.MONGO_URI
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/chat-app';
 mongoose.connect(MONGO_URI)
     .then(() => console.log('Connected to MongoDB'))
@@ -33,36 +32,52 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
+/**
+ * Background Task: Cleanup Inactive Users
+ * Sets users to offline if they haven't sent a heartbeat in 30 seconds
+ */
+setInterval(async () => {
+    const threshold = new Date(Date.now() - 30000);
+    await User.updateMany(
+        { lastActive: { $lt: threshold }, isOnline: true },
+        { isOnline: false }
+    );
+}, 15000);
+
 // --- Auth Routes ---
 
 // Register
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
-        
-        // Check if user exists
         const existing = await User.findOne({ $or: [{ username }, { email }] });
         if (existing) {
             return res.status(400).json({ success: false, message: 'Username or Email already taken' });
         }
 
-        // Simple password storage (use bcrypt in production!)
-        const newUser = new User({ username, email, password, isOnline: true });
+        const newUser = new User({ 
+            username, 
+            email, 
+            password, 
+            isOnline: true,
+            lastActive: Date.now()
+        });
         await newUser.save();
 
         res.json({ 
             success: true, 
-            user: { username: newUser.username, role: newUser.role, email: newUser.email } 
+            user: { username: newUser.username, role: newUser.role, email: newUser.email, password: newUser.password } 
         });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error during registration' });
     }
 });
 
-// Login
+// Login / Heartbeat
+// This handles the heartbeat by updating lastActive and isOnline
 app.post('/api/auth/login', async (req, res) => {
     try {
-        const { identifier, password } = req.body; // identifier can be username or email
+        const { identifier, password } = req.body;
         
         const user = await User.findOne({ 
             $or: [{ username: identifier }, { email: identifier }],
@@ -79,20 +94,19 @@ app.post('/api/auth/login', async (req, res) => {
 
         res.json({ 
             success: true, 
-            user: { username: user.username, role: user.role, email: user.email } 
+            user: { username: user.username, role: user.role, email: user.email, password: user.password } 
         });
     } catch (err) {
-        res.status(500).json({ success: false, message: 'Server error during login' });
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
 // --- User Management Routes ---
 
-// Get all users for the sidebar & admin panel
+// Get all users (sorted: online first, then by username)
 app.get('/api/users', async (req, res) => {
     try {
-        // In a real app, we might filter isOnline recently or use WebSockets
-        const users = await User.find({}, 'username role isOnline');
+        const users = await User.find({}, 'username role isOnline').sort({ isOnline: -1, username: 1 });
         res.json(users);
     } catch (err) {
         res.status(500).json({ success: false, message: 'Error fetching users' });
@@ -104,7 +118,6 @@ app.put('/api/admin/rank', async (req, res) => {
     try {
         const { adminUsername, targetUsername, newRole } = req.body;
 
-        // Verify admin
         const admin = await User.findOne({ username: adminUsername });
         if (!admin || (admin.role !== 'Developer' && admin.role !== 'Owner')) {
             return res.status(403).json({ success: false, message: 'Insufficient permissions' });
@@ -142,7 +155,7 @@ app.delete('/api/admin/users/:username', async (req, res) => {
     }
 });
 
-// Serving the app
+// Global Fallback
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
