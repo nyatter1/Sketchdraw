@@ -13,22 +13,8 @@
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col font-sans">
 
-    <!-- JOIN SECTION -->
-    <div id="join-section" class="flex-grow flex items-center justify-center p-4">
-        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-slate-700 text-center">
-            <h1 class="text-3xl font-bold mb-6 text-indigo-400">Join Chat</h1>
-            <form onsubmit="joinChat(event)" class="space-y-4">
-                <input type="text" id="username-input" placeholder="Enter username..." required 
-                    class="w-full bg-slate-900 border border-slate-700 rounded-lg p-4 focus:ring-2 focus:ring-indigo-500 outline-none text-center text-xl">
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition duration-200">
-                    Enter Chat
-                </button>
-            </form>
-        </div>
-    </div>
-
     <!-- CHAT SECTION -->
-    <div id="chat-section" class="hidden flex-grow flex flex-col h-screen max-h-screen overflow-hidden">
+    <div id="chat-section" class="flex flex-grow flex-col h-screen max-h-screen overflow-hidden">
         <header class="bg-slate-800 border-b border-slate-700 p-4 flex justify-between items-center shadow-lg">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center font-bold text-xl">C</div>
@@ -37,7 +23,7 @@
                     <span id="online-count-badge" class="text-xs text-green-400">0 Online</span>
                 </div>
             </div>
-            <button onclick="window.location.reload()" class="text-slate-400 hover:text-white text-sm bg-slate-700 px-3 py-1 rounded-md transition">Leave</button>
+            <button onclick="logout()" class="text-slate-400 hover:text-white text-sm bg-slate-700 px-3 py-1 rounded-md transition">Logout</button>
         </header>
 
         <div class="flex flex-grow overflow-hidden">
@@ -71,49 +57,39 @@
         </div>
     </div>
 
+    <!-- Admin Modal -->
+    <div id="admin-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-800 border border-slate-700 p-6 rounded-2xl max-w-sm w-full shadow-2xl">
+            <h3 class="text-xl font-bold mb-2">User Settings</h3>
+            <p id="target-username-display" class="text-indigo-400 font-mono mb-6"></p>
+            <div class="flex flex-col gap-3">
+                <button onclick="deleteAccount()" class="w-full bg-red-600 hover:bg-red-500 py-3 rounded-lg font-bold transition">Delete Account</button>
+                <button onclick="closeAdminModal()" class="w-full bg-slate-700 hover:bg-slate-600 py-3 rounded-lg transition">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentUser = null;
+        let selectedUserForAdmin = null;
 
-        async function joinChat(e) {
-            e.preventDefault();
-            const username = document.getElementById('username-input').value.trim();
-            if (!username) return;
-
-            try {
-                const res = await fetch('/api/auth/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        username: username, 
-                        password: 'default_password',
-                        email: `${username}@chat.local` 
-                    })
-                });
-                
-                if (res.status === 400) {
-                   const loginRes = await fetch('/api/auth/login', {
-                       method: 'POST',
-                       headers: { 'Content-Type': 'application/json' },
-                       body: JSON.stringify({ identifier: username, password: 'default_password' })
-                   });
-                   const loginData = await loginRes.json();
-                   if (loginData.success) {
-                       startSession(loginData.user);
-                   }
-                } else {
-                    const data = await res.json();
-                    if (data.success) startSession(data.user);
-                }
-            } catch (err) {
-                startSession({ username: username, role: 'Member' });
+        // Initialize App
+        window.onload = () => {
+            const savedUser = localStorage.getItem('chat_user');
+            if (!savedUser) {
+                window.location.href = '/login';
+                return;
             }
+            currentUser = JSON.parse(savedUser);
+            startSession();
+        };
+
+        function logout() {
+            localStorage.removeItem('chat_user');
+            window.location.href = '/login';
         }
 
-        function startSession(user) {
-            currentUser = user;
-            document.getElementById('join-section').classList.add('hidden');
-            document.getElementById('chat-section').classList.remove('hidden');
-            
+        function startSession() {
             fetchMessages();
             fetchUsers();
             
@@ -121,7 +97,6 @@
             setInterval(fetchMessages, 2000);
             setInterval(fetchUsers, 5000);
             
-            // Start heartbeat to tell server we are online
             sendHeartbeat();
             setInterval(sendHeartbeat, 10000);
         }
@@ -193,9 +168,12 @@
                 document.getElementById('online-count-badge').innerText = `${onlineUsers.length} Online`;
 
                 const renderUser = (u, colorClass) => `
-                    <div class="flex items-center gap-2 p-2 hover:bg-slate-700/50 rounded-lg transition">
-                        <div class="w-2 h-2 ${colorClass} rounded-full"></div>
-                        <span class="text-sm ${colorClass === 'bg-slate-600' ? 'text-slate-500' : 'text-slate-200'}">${u.username}</span>
+                    <div onclick="handleUserClick('${u.username}')" class="flex items-center justify-between p-2 hover:bg-slate-700/50 rounded-lg transition cursor-pointer">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 ${colorClass} rounded-full"></div>
+                            <span class="text-sm ${colorClass === 'bg-slate-600' ? 'text-slate-500' : 'text-slate-200'}">${u.username}</span>
+                        </div>
+                        ${u.role === 'Developer' ? '<span class="text-[10px] bg-indigo-500/20 text-indigo-400 px-1 rounded border border-indigo-500/30">DEV</span>' : ''}
                     </div>
                 `;
 
@@ -203,6 +181,40 @@
                 document.getElementById('user-list-offline').innerHTML = offlineUsers.map(u => renderUser(u, 'bg-slate-600')).join('');
                 
             } catch (err) {}
+        }
+
+        // Admin Functionality
+        function handleUserClick(targetUsername) {
+            if (currentUser.role !== 'Developer') return;
+            selectedUserForAdmin = targetUsername;
+            document.getElementById('target-username-display').innerText = `@${targetUsername}`;
+            document.getElementById('admin-modal').classList.remove('hidden');
+        }
+
+        function closeAdminModal() {
+            document.getElementById('admin-modal').classList.add('hidden');
+            selectedUserForAdmin = null;
+        }
+
+        async function deleteAccount() {
+            if (!selectedUserForAdmin || currentUser.role !== 'Developer') return;
+            
+            if (!confirm(`Are you sure you want to permanently delete ${selectedUserForAdmin}?`)) return;
+
+            try {
+                const res = await fetch(`/api/admin/users/${selectedUserForAdmin}?adminUsername=${currentUser.username}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeAdminModal();
+                    fetchUsers();
+                } else {
+                    alert(data.message);
+                }
+            } catch (err) {
+                alert("Failed to delete user.");
+            }
         }
 
         function escapeHtml(text) {
