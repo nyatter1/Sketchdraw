@@ -68,7 +68,7 @@
             <div class="relative">
                 <button onclick="toggleDropdown()" id="profile-trigger" class="relative group block focus:outline-none">
                     <div id="nav-pfp-container" class="w-10 h-10 rounded-xl overflow-hidden border-2 border-slate-700 bg-slate-800 pfp-logo-glow flex items-center justify-center font-bold">
-                        <img id="nav-pfp-img" src="" class="w-full h-full object-cover hidden" onerror="this.style.display='none'">
+                        <img id="nav-pfp-img" src="" class="w-full h-full object-cover hidden">
                         <span id="nav-pfp-initial">?</span>
                     </div>
                     <div class="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full"></div>
@@ -101,7 +101,6 @@
                         </svg>
                         Secret Messages
                     </a>
-                    <!-- Dropdown Admin Link -->
                     <a id="admin-dropdown-link" href="/admin.html" class="hidden flex items-center gap-3 px-4 py-2.5 hover:bg-red-900/20 text-sm font-bold transition text-red-500">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -126,7 +125,6 @@
         </div>
 
         <div class="flex items-center gap-2">
-            <!-- Legacy Header Links (Keeping these for quick access) -->
             <a id="admin-link" href="/admin.html" class="hidden p-2 hover:bg-red-900/20 rounded-xl transition text-red-500">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -151,11 +149,10 @@
                 <div id="user-list-offline" class="p-2 space-y-1"></div>
             </div>
             
-            <!-- Bottom User Card -->
             <div class="p-4 border-t border-slate-800 bg-slate-900/80">
                 <div class="flex items-center gap-3">
                     <div id="side-pfp-container" class="w-8 h-8 rounded-lg overflow-hidden border border-slate-700 bg-slate-800 flex items-center justify-center">
-                        <img id="side-pfp-img" src="" class="w-full h-full object-cover hidden" onerror="this.style.display='none'">
+                        <img id="side-pfp-img" src="" class="w-full h-full object-cover hidden">
                         <span id="side-pfp-initial" class="text-xs">?</span>
                     </div>
                     <div class="overflow-hidden hidden md:block">
@@ -168,12 +165,8 @@
 
         <!-- Main Content -->
         <main class="flex-1 flex flex-col bg-slate-950">
-            <!-- Messages Area -->
-            <div id="messages-container" class="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-                <!-- Messages populate here -->
-            </div>
+            <div id="messages-container" class="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar"></div>
 
-            <!-- Input Area -->
             <div class="p-4 border-t border-slate-800 bg-slate-900/30">
                 <form onsubmit="sendMessage(event)" class="max-w-4xl mx-auto relative">
                     <input type="text" id="msg-input" placeholder="Message #general..." autocomplete="off"
@@ -200,16 +193,14 @@
             updateUserUI();
             applySavedTheme();
             
-            // Start Intervals
             fetchMessages(true);
             fetchUsers();
             setInterval(fetchMessages, 3000);
             setInterval(fetchUsers, 5000);
             setInterval(checkRevealRequests, 4000);
 
-            // Sync when other tabs update profile
             window.addEventListener('storage', (e) => {
-                if (e.key === 'chat_user') {
+                if (e.key === 'chat_user' && e.newValue) {
                     currentUser = JSON.parse(e.newValue);
                     updateUserUI();
                 }
@@ -227,12 +218,10 @@
             if (!currentUser) return;
             const role = currentUser.role || 'Member';
 
-            // Update Usernames
             document.getElementById('nav-username').innerText = `@${currentUser.username}`;
             document.getElementById('side-username').innerText = `@${currentUser.username}`;
             document.getElementById('side-role').innerText = role;
 
-            // Show Admin Links for high roles
             if (role === 'Developer' || role === 'Owner') {
                 document.getElementById('admin-link').classList.remove('hidden');
                 document.getElementById('admin-dropdown-link').classList.remove('hidden');
@@ -241,25 +230,28 @@
                 document.getElementById('admin-dropdown-link').classList.add('hidden');
             }
 
-            // Update PFPs and Initials
-            const initial = currentUser.username.charAt(0).toUpperCase();
-            document.getElementById('nav-pfp-initial').innerText = initial;
-            document.getElementById('side-pfp-initial').innerText = initial;
-
-            const navImg = document.getElementById('nav-pfp-img');
-            const sideImg = document.getElementById('side-pfp-img');
+            const initialText = currentUser.username.charAt(0).toUpperCase();
             
-            if (currentUser.profilePic) {
-                navImg.src = currentUser.profilePic;
-                navImg.classList.remove('hidden');
-                document.getElementById('nav-pfp-initial').classList.add('hidden');
+            // FIX: Profile Pic Rendering logic
+            const updatePFP = (imgId, initialId) => {
+                const imgEl = document.getElementById(imgId);
+                const initEl = document.getElementById(initialId);
                 
-                sideImg.src = currentUser.profilePic;
-                sideImg.classList.remove('hidden');
-                document.getElementById('side-pfp-initial').classList.add('hidden');
-            }
+                // Only show image if it exists and looks like a data URL or valid path
+                if (currentUser.profilePic && currentUser.profilePic.length > 10) {
+                    imgEl.src = currentUser.profilePic;
+                    imgEl.classList.remove('hidden');
+                    initEl.classList.add('hidden');
+                } else {
+                    imgEl.classList.add('hidden');
+                    initEl.innerText = initialText;
+                    initEl.classList.remove('hidden');
+                }
+            };
 
-            // Update Rank Glow
+            updatePFP('nav-pfp-img', 'nav-pfp-initial');
+            updatePFP('side-pfp-img', 'side-pfp-initial');
+
             const navCont = document.getElementById('nav-pfp-container');
             navCont.className = `w-10 h-10 rounded-xl overflow-hidden border-2 bg-slate-800 pfp-logo-glow rank-glow-${role} flex items-center justify-center font-bold`;
         }
@@ -371,12 +363,12 @@
             const theme = localStorage.getItem('user_theme');
             if (theme) {
                 try {
-                    const { bg, accent } = JSON.parse(theme);
+                    const { accent } = JSON.parse(theme);
                     if (accent) {
                         const style = document.createElement('style');
                         style.innerHTML = `.bg-indigo-600 { background-color: var(--theme-accent) !important; } .text-indigo-600 { color: var(--theme-accent) !important; }`;
                         document.head.appendChild(style);
-                        document.documentElement.style.setProperty('--theme-accent', accent.includes('-') ? `var(--tw-color-${accent})` : accent);
+                        document.documentElement.style.setProperty('--theme-accent', accent);
                     }
                 } catch(e) {}
             }
