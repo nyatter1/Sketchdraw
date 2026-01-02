@@ -9,6 +9,7 @@
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
+        .rank-icon { width: 18px; height: 18px; object-fit: contain; }
     </style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col font-sans">
@@ -17,18 +18,20 @@
     <div id="chat-section" class="flex flex-grow flex-col h-screen max-h-screen overflow-hidden">
         <header class="bg-slate-800 border-b border-slate-700 p-4 flex justify-between items-center shadow-lg">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center font-bold text-xl text-white">V</div>
+                <div class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center font-bold text-xl text-white shadow-inner">V</div>
                 <div>
                     <h2 class="font-bold text-lg leading-none">Live Lobby</h2>
                     <span id="online-count-badge" class="text-xs text-green-400">0 Online</span>
                 </div>
             </div>
             <div class="flex items-center gap-4">
-                <div id="user-badge" class="hidden md:block text-right">
-                    <p id="display-name" class="text-sm font-bold leading-none"></p>
-                    <p id="display-role" class="text-[10px] text-slate-400 uppercase tracking-tighter"></p>
+                <div id="user-badge" class="hidden md:flex items-center gap-2 text-right bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-700">
+                    <div>
+                        <p id="display-name" class="text-sm font-bold leading-none"></p>
+                    </div>
+                    <img id="my-rank-icon" src="" alt="Rank" class="rank-icon hidden">
                 </div>
-                <button onclick="logout()" class="text-slate-400 hover:text-white text-sm bg-slate-700 px-3 py-1 rounded-md transition">Logout</button>
+                <button onclick="logout()" class="text-slate-400 hover:text-white text-sm bg-slate-700 px-3 py-1 rounded-md transition border border-slate-600">Logout</button>
             </div>
         </header>
 
@@ -49,8 +52,8 @@
                 <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent">
                     <form onsubmit="sendMessage(event)" class="max-w-4xl mx-auto flex gap-2">
                         <input type="text" id="msg-input" placeholder="Type a message..." autocomplete="off"
-                            class="flex-grow bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none text-white">
-                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 p-3 rounded-xl transition">
+                            class="flex-grow bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none text-white transition-all">
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 p-3 rounded-xl transition shadow-lg active:scale-95">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                             </svg>
@@ -64,10 +67,10 @@
     <!-- Admin Modal -->
     <div id="admin-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
         <div class="bg-slate-800 border border-slate-700 p-6 rounded-2xl max-w-sm w-full shadow-2xl">
-            <h3 class="text-xl font-bold mb-2">User Settings</h3>
-            <p id="target-username-display" class="text-indigo-400 font-mono mb-6"></p>
+            <h3 class="text-xl font-bold mb-2">User Management</h3>
+            <p id="target-username-display" class="text-indigo-400 font-mono mb-6 bg-slate-900 p-2 rounded"></p>
             <div class="flex flex-col gap-3">
-                <button onclick="deleteAccount()" class="w-full bg-red-600 hover:bg-red-500 py-3 rounded-lg font-bold transition text-white">Delete Account</button>
+                <button onclick="deleteAccount()" class="w-full bg-red-600 hover:bg-red-500 py-3 rounded-lg font-bold transition text-white">Delete Account Permanently</button>
                 <button onclick="closeAdminModal()" class="w-full bg-slate-700 hover:bg-slate-600 py-3 rounded-lg transition text-white">Cancel</button>
             </div>
         </div>
@@ -78,10 +81,16 @@
         let selectedUserForAdmin = null;
         let lastMessageId = null;
         
-        // Audio for new messages
         const chatSound = new Audio('/chat.mp3');
 
-        // Initialize App
+        // Helper to get rank icon path
+        function getRankIcon(role) {
+            const r = role ? role.toLowerCase() : 'member';
+            if (r === 'developer') return '/developer.png';
+            if (r === 'owner') return '/owner.png';
+            return '/member.png';
+        }
+
         window.onload = () => {
             const savedUser = localStorage.getItem('chat_user');
             if (!savedUser) {
@@ -91,7 +100,10 @@
             currentUser = JSON.parse(savedUser);
             
             document.getElementById('display-name').innerText = currentUser.username;
-            document.getElementById('display-role').innerText = currentUser.role;
+            
+            const myIcon = document.getElementById('my-rank-icon');
+            myIcon.src = getRankIcon(currentUser.role);
+            myIcon.classList.remove('hidden');
             
             startSession();
         };
@@ -102,13 +114,10 @@
         }
 
         function startSession() {
-            fetchMessages(true); // Initial fetch
+            fetchMessages(true);
             fetchUsers();
-            
-            // Polling loops
             setInterval(fetchMessages, 2000);
             setInterval(fetchUsers, 5000);
-            
             sendHeartbeat();
             setInterval(sendHeartbeat, 10000);
         }
@@ -131,13 +140,13 @@
                 const container = document.getElementById('messages-container');
                 const shouldScroll = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
 
-                // Check for new messages to play sound
                 if (messages.length > 0) {
                     const latestMsg = messages[messages.length - 1];
                     if (lastMessageId && latestMsg._id !== lastMessageId) {
-                        // Play sound if message is not from current user
                         if (latestMsg.user !== currentUser.username) {
-                            chatSound.play().catch(e => console.log("Audio playback blocked by browser until user interacts."));
+                            chatSound.play().catch(e => {
+                                console.log("Sound autoplay blocked");
+                            });
                         }
                     }
                     lastMessageId = latestMsg._id;
@@ -145,18 +154,16 @@
 
                 const html = messages.map(msg => {
                     const isMe = msg.user === currentUser.username;
-                    
-                    // Local Timezone Conversion
                     const localTime = new Date(msg.timestamp).toLocaleTimeString([], { 
                         hour: '2-digit', 
                         minute: '2-digit' 
                     });
 
                     return `
-                        <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+                        <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <span class="text-xs text-slate-500 mb-1 px-1">${msg.user} • ${localTime}</span>
-                            <div class="${isMe ? 'bg-indigo-600' : 'bg-slate-800'} p-3 rounded-xl max-w-xs md:max-w-md shadow-md">
-                                <p class="text-sm">${escapeHtml(msg.text)}</p>
+                            <div class="${isMe ? 'bg-indigo-600' : 'bg-slate-800'} p-3 rounded-xl max-w-[85%] md:max-w-md shadow-md">
+                                <p class="text-sm whitespace-pre-wrap break-words">${escapeHtml(msg.text)}</p>
                             </div>
                         </div>
                     `;
@@ -197,12 +204,12 @@
                 document.getElementById('online-count-badge').innerText = `${onlineUsers.length} Online`;
 
                 const renderUser = (u, colorClass) => `
-                    <div onclick="handleUserClick('${u.username}')" class="flex items-center justify-between p-2 hover:bg-slate-700/50 rounded-lg transition cursor-pointer">
+                    <div onclick="handleUserClick('${u.username}')" class="flex items-center justify-between p-2 hover:bg-slate-700/50 rounded-lg transition cursor-pointer group">
                         <div class="flex items-center gap-2">
-                            <div class="w-2 h-2 ${colorClass} rounded-full"></div>
-                            <span class="text-sm ${colorClass === 'bg-slate-600' ? 'text-slate-500' : 'text-slate-200'}">${u.username}</span>
+                            <div class="w-2 h-2 ${colorClass} rounded-full shadow-sm"></div>
+                            <span class="text-sm ${colorClass === 'bg-slate-600' ? 'text-slate-500' : 'text-slate-200'} font-medium">${u.username}</span>
                         </div>
-                        ${u.role === 'Developer' ? '<span class="text-[10px] bg-indigo-500/20 text-indigo-400 px-1 rounded border border-indigo-500/30">DEV</span>' : ''}
+                        <img src="${getRankIcon(u.role)}" alt="${u.role}" class="rank-icon opacity-80 group-hover:opacity-100 transition-opacity">
                     </div>
                 `;
 
@@ -212,9 +219,9 @@
             } catch (err) {}
         }
 
-        // Admin Functionality
         function handleUserClick(targetUsername) {
             if (currentUser.role !== 'Developer') return;
+            // Prevent self-deletion if needed, or just let developers manage everyone
             selectedUserForAdmin = targetUsername;
             document.getElementById('target-username-display').innerText = `@${targetUsername}`;
             document.getElementById('admin-modal').classList.remove('hidden');
@@ -227,8 +234,7 @@
 
         async function deleteAccount() {
             if (!selectedUserForAdmin || currentUser.role !== 'Developer') return;
-            
-            if (!confirm(`Are you sure you want to permanently delete ${selectedUserForAdmin}?`)) return;
+            if (!confirm(`DANGER: Are you sure you want to permanently delete ${selectedUserForAdmin}? This cannot be undone.`)) return;
 
             try {
                 const res = await fetch(`/api/admin/users/${selectedUserForAdmin}?adminUsername=${currentUser.username}`, {
