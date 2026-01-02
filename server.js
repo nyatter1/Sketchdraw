@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Increased limit for profile picture base64 strings
 app.use(express.static('public'));
 
 // MongoDB Connection
@@ -26,6 +26,7 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true },
     role: { type: String, default: 'Member' }, // Roles: Member, Owner, Developer
     profilePic: { type: String, default: null },
+    bio: { type: String, default: '' },
     lastSeen: { type: Date, default: Date.now }
 });
 
@@ -35,7 +36,6 @@ const messageSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
-// New Schema for Secret Messages
 const secretSchema = new mongoose.Schema({
     sender: { type: String, required: true },
     recipient: { type: String, required: true },
@@ -58,7 +58,7 @@ app.post('/api/auth/register', async (req, res) => {
         const role = userCount === 0 ? 'Developer' : 'Member';
         const newUser = new User({ username, email, password, role });
         await newUser.save();
-        res.json({ success: true, user: { username, role } });
+        res.json({ success: true, user: { username, role, email, bio: '' } });
     } catch (err) {
         res.status(400).json({ success: false, message: "Username or Email already exists" });
     }
@@ -79,7 +79,9 @@ app.post('/api/auth/login', async (req, res) => {
                 user: { 
                     username: user.username, 
                     role: user.role, 
-                    profilePic: user.profilePic 
+                    profilePic: user.profilePic,
+                    email: user.email,
+                    bio: user.bio
                 } 
             });
         } else {
@@ -90,7 +92,40 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-// Update profile (PFP, etc)
+// Update profile (Unified endpoint used by profile.html)
+app.put('/api/users/profile', async (req, res) => {
+    try {
+        const { currentUsername, username, email, bio, profilePic } = req.body;
+        
+        // Find user by their current session username
+        const user = await User.findOne({ username: currentUsername });
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        // Apply updates if they exist in the request
+        if (username) user.username = username;
+        if (email) user.email = email;
+        if (bio !== undefined) user.bio = bio;
+        if (profilePic) user.profilePic = profilePic;
+
+        await user.save();
+        
+        res.json({ 
+            success: true, 
+            user: { 
+                username: user.username, 
+                profilePic: user.profilePic, 
+                role: user.role,
+                email: user.email,
+                bio: user.bio
+            } 
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: "Update conflict or server error" });
+    }
+});
+
+// Legacy PFP Update endpoint (kept for compatibility if needed)
 app.post('/api/profile/update', async (req, res) => {
     try {
         const { username, profilePic } = req.body;
@@ -111,7 +146,6 @@ app.post('/api/profile/update', async (req, res) => {
 
 // --- SECRET MESSAGING ROUTES ---
 
-// Send a secret message
 app.post('/api/secrets', async (req, res) => {
     try {
         const { sender, recipient, message } = req.body;
@@ -126,7 +160,6 @@ app.post('/api/secrets', async (req, res) => {
     }
 });
 
-// Get inbox for a user
 app.get('/api/secrets/inbox', async (req, res) => {
     try {
         const { username } = req.query;
@@ -137,7 +170,6 @@ app.get('/api/secrets/inbox', async (req, res) => {
     }
 });
 
-// Request to reveal identity
 app.post('/api/secrets/reveal-request', async (req, res) => {
     try {
         const { secretId } = req.body;
@@ -148,7 +180,6 @@ app.post('/api/secrets/reveal-request', async (req, res) => {
     }
 });
 
-// Check for any pending reveal requests (Polled by all tabs)
 app.get('/api/secrets/check-requests', async (req, res) => {
     try {
         const { username } = req.query;
@@ -168,7 +199,6 @@ app.get('/api/secrets/check-requests', async (req, res) => {
     }
 });
 
-// Respond to a reveal request
 app.post('/api/secrets/respond-reveal', async (req, res) => {
     try {
         const { secretId, approved } = req.body;
@@ -206,12 +236,13 @@ app.post('/api/messages', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
     try {
-        const users = await User.find({}, 'username role lastSeen profilePic');
+        const users = await User.find({}, 'username role lastSeen profilePic bio');
         const now = Date.now();
         const statusUsers = users.map(u => ({
             username: u.username,
             role: u.role,
             profilePic: u.profilePic,
+            bio: u.bio,
             isOnline: (now - new Date(u.lastSeen).getTime()) < 30000
         }));
         res.json(statusUsers);
@@ -220,7 +251,6 @@ app.get('/api/users', async (req, res) => {
     }
 });
 
-// Admin Rank Update
 app.put('/api/admin/rank', async (req, res) => {
     try {
         const { adminUsername, targetUsername, newRole } = req.body;
