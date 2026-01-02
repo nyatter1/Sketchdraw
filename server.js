@@ -11,9 +11,9 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the 'local' folder as requested
+// Serve static files from the 'public' folder as requested
 // This is where your index.html and profile.png will reside
-app.use(express.static(path.join(__dirname, 'local')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // MongoDB Connection
 // Using the provided environment key: MONGODB_URI
@@ -30,7 +30,7 @@ app.get('/api/status', (req, res) => {
 
 // Fallback to serve the HTML file for any non-API routes (Single Page App support)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'local', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
